@@ -28,7 +28,6 @@
 - [ ] **[TECH-1]** Split simulation logic from UI so future multiplayer or server authority is possible
 - [ ] **[TECH-2]** Add deterministic seed support for replayable scenarios
 - [ ] **[TECH-3]** Add smoke tests for the daily simulation loop
-- [ ] **[DEPLOY-1]** Add GitHub Pages deployment notes and base-path handling
 
 ## Backlog
 
@@ -46,3 +45,4 @@
 - [x] **[SETUP-3]** Bootstrap the static mobile-first app stack with Vite + TypeScript and a GitHub Pages-friendly build - 2026-04-04
 - [x] **[GAME-1]** Implement the first playable market loop: day advance, cash, inventory, demand-driven pricing - 2026-04-04
 - [x] **[GAME-2]** Add rival speculator activity that competes for scarce warehouse supply - 2026-04-04
+- [x] **[DEPLOY-1]** Add GitHub Pages deployment notes and base-path handling - 2026-04-04

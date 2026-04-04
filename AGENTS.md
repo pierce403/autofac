@@ -63,12 +63,16 @@ Verified on 2026-04-04:
 npm install
 npm run check
 npm run build
+git push origin main
+gh run watch --repo pierce403/autofac "$(gh run list --repo pierce403/autofac --limit 1 --json databaseId --jq '.[0].databaseId')"
+curl -I https://autofac.io
 ```
 
 ## Known Pitfalls
 
 - Before `npm install`, `npm run check` may resolve to an older system `tsc` and report options as invalid. Install project dependencies first, then rerun the npm scripts.
 - `vite.config.ts` currently uses `base: './'` so the built app stays compatible with static subdirectory hosting.
+- GitHub Pages for `pierce403/autofac` is configured for `build_type: workflow` and custom domain `autofac.io`. Without `.github/workflows/deploy-pages.yml`, the domain serves a GitHub 404 even when DNS and certificate state are already correct.
 
 ## Current Architecture Notes
 
@@ -76,9 +80,11 @@ npm run build
 - Local persistence uses `localStorage` key `autofac-save-v2`. If the save schema changes, version it deliberately instead of trying to infer migrations ad hoc.
 - Day advancement currently moves each product by season factor, volatility pulse, buyer pull, and restock. Manual trades also nudge spot price, so trade impact is already part of the economy model.
 - Rival desks now live in the same daily simulation pass as the market update. They should continue to trade against the same supply pool rather than a separate hidden market.
+- Custom-domain deployment artifact is supplied by `public/CNAME`, which Vite copies into `dist/` during `npm run build`.
 
 ## Rapport Notes
 
 - The collaborator wants visible momentum: start with a large TODO, then work through it.
 - They want a strict commit cadence: initial commit at startup, then one commit per completed task.
 - They want recursive self-improvement behavior explicitly documented in this file.
+- They want the live site verified at the real domain, not just a successful Actions run.
