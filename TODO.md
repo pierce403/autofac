@@ -6,7 +6,6 @@
 
 - [ ] **[WORLD-1]** Define the fictional setting, warehouse voice, and product taxonomy for the game world
 - [ ] **[SIM-1]** Build a demand model with baseline demand, seasonal modifiers, price elasticity, and short-lived demand spikes
-- [ ] **[UX-5]** Make the market layout read cleanly on desktop without compromising the mobile-first flow
 
 ## Next Up
 
@@ -48,3 +47,4 @@
 - [x] **[GAME-2]** Add rival speculator activity that competes for scarce warehouse supply - 2026-04-04
 - [x] **[DEPLOY-1]** Add GitHub Pages deployment notes and base-path handling - 2026-04-04
 - [x] **[TIME-1]** Add a live market clock so each 60 seconds on-site advances one day - 2026-04-04
+- [x] **[UX-5]** Make the market layout read cleanly on desktop without compromising the mobile-first flow - 2026-04-04

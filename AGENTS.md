@@ -83,6 +83,7 @@ curl -I https://autofac.io
 - The in-session market clock is managed in `src/app.ts` with a one-minute anchor timestamp, a one-second UI tick, and catch-up advancement when the browser delays execution. Manual day advancement resets the clock back to a full minute.
 - Rival desks now live in the same daily simulation pass as the market update. They should continue to trade against the same supply pool rather than a separate hidden market.
 - Custom-domain deployment artifact is supplied by `public/CNAME`, which Vite copies into `dist/` during `npm run build`.
+- The desktop layout now relies on `dashboard-layout` and `side-column` in `src/app.ts`/`src/styles.css`: market board on the left, rivals and notes on a sticky right rail, while mobile still collapses back to one column.
 
 ## Rapport Notes
 

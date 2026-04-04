@@ -204,44 +204,48 @@ const render = (state: GameState, flash: string, secondsRemaining: number): stri
         </article>
       </section>
 
-      <section class="panel">
-        <div class="panel-header">
-          <h2>Market Board</h2>
-          <span class="pill">Single Player</span>
-        </div>
-        <div class="product-grid">
-          ${PRODUCTS.map((product) => renderProductCard(state, product.id)).join('')}
-        </div>
-      </section>
+      <div class="dashboard-layout">
+        <section class="panel market-panel">
+          <div class="panel-header">
+            <h2>Market Board</h2>
+            <span class="pill">Single Player</span>
+          </div>
+          <div class="product-grid">
+            ${PRODUCTS.map((product) => renderProductCard(state, product.id)).join('')}
+          </div>
+        </section>
 
-      <section class="panel">
-        <div class="panel-header">
-          <h2>Rival Desks</h2>
-          <span class="pill subtle">${state.rivals.length} active</span>
-        </div>
-        <div class="product-grid rival-grid">
-          ${state.rivals.map((rival) => renderRivalCard(state, rival.id)).join('')}
-        </div>
-      </section>
+        <aside class="side-column">
+          <section class="panel">
+            <div class="panel-header">
+              <h2>Rival Desks</h2>
+              <span class="pill subtle">${state.rivals.length} active</span>
+            </div>
+            <div class="product-grid rival-grid">
+              ${state.rivals.map((rival) => renderRivalCard(state, rival.id)).join('')}
+            </div>
+          </section>
 
-      <section class="panel">
-        <div class="panel-header">
-          <h2>Desk Notes</h2>
-          <span class="pill subtle">Local Save Active</span>
-        </div>
-        <ul class="log-list">
-          ${state.logs
-            .map(
-              (entry) => `
-                <li class="log-item">
-                  <span class="log-day">Day ${entry.day}</span>
-                  <p class="log-copy ${logToneClass(entry.tone)}">${entry.text}</p>
-                </li>
-              `,
-            )
-            .join('')}
-        </ul>
-      </section>
+          <section class="panel notes-panel">
+            <div class="panel-header">
+              <h2>Desk Notes</h2>
+              <span class="pill subtle">Local Save Active</span>
+            </div>
+            <ul class="log-list">
+              ${state.logs
+                .map(
+                  (entry) => `
+                    <li class="log-item">
+                      <span class="log-day">Day ${entry.day}</span>
+                      <p class="log-copy ${logToneClass(entry.tone)}">${entry.text}</p>
+                    </li>
+                  `,
+                )
+                .join('')}
+            </ul>
+          </section>
+        </aside>
+      </div>
     </main>
   `;
 };
