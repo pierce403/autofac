@@ -70,6 +70,12 @@ npm run build
 - Before `npm install`, `npm run check` may resolve to an older system `tsc` and report options as invalid. Install project dependencies first, then rerun the npm scripts.
 - `vite.config.ts` currently uses `base: './'` so the built app stays compatible with static subdirectory hosting.
 
+## Current Architecture Notes
+
+- The first playable loop lives in plain TypeScript modules under `src/game/`; keep simulation logic there and keep `src/app.ts` focused on rendering and input wiring.
+- Local persistence uses `localStorage` key `autofac-save-v1`. If the save schema changes, version it deliberately instead of trying to infer migrations ad hoc.
+- Day advancement currently moves each product by season factor, volatility pulse, buyer pull, and restock. Manual trades also nudge spot price, so trade impact is already part of the economy model.
+
 ## Rapport Notes
 
 - The collaborator wants visible momentum: start with a large TODO, then work through it.

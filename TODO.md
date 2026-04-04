@@ -4,12 +4,11 @@
 
 ## Active / In Progress
 
-- [ ] **[GAME-1]** Implement the first playable market loop: day advance, cash, inventory, demand-driven pricing
 - [ ] **[GAME-2]** Add rival speculator activity that competes for scarce warehouse supply
+- [ ] **[WORLD-1]** Define the fictional setting, warehouse voice, and product taxonomy for the game world
 
 ## Next Up
 
-- [ ] **[WORLD-1]** Define the fictional setting, warehouse voice, and product taxonomy for the game world
 - [ ] **[WORLD-2]** Create a roster of fictional household goods with seasonality, perishability, and storage profile metadata
 - [ ] **[SIM-1]** Build a demand model with baseline demand, seasonal modifiers, price elasticity, and short-lived demand spikes
 - [ ] **[SIM-2]** Add warehouse replenishment rules, supplier lead times, and stockout behavior
@@ -46,3 +45,4 @@
 - [x] **[SETUP-1]** Initialize git repo with `main` as default branch - 2026-04-04
 - [x] **[SETUP-2]** Create `AGENTS.md` and the initial execution-focused `TODO.md` - 2026-04-04
 - [x] **[SETUP-3]** Bootstrap the static mobile-first app stack with Vite + TypeScript and a GitHub Pages-friendly build - 2026-04-04
+- [x] **[GAME-1]** Implement the first playable market loop: day advance, cash, inventory, demand-driven pricing - 2026-04-04
