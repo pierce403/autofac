@@ -120,6 +120,60 @@ body::before {
   max-width: 28rem;
 }
 
+.clock-card {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1rem;
+  padding: 0.95rem 1rem;
+  border-radius: 1.15rem;
+  background: rgba(255, 247, 235, 0.82);
+  border: 1px solid rgba(58, 44, 30, 0.08);
+}
+
+.clock-copy {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.clock-label {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.clock-copy strong,
+.clock-note {
+  color: var(--accent-deep);
+  font-weight: 800;
+}
+
+.clock-copy strong {
+  font-size: 1.45rem;
+  letter-spacing: -0.04em;
+}
+
+.clock-note {
+  font-size: 0.95rem;
+}
+
+.clock-bar {
+  overflow: hidden;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: rgba(124, 91, 52, 0.14);
+}
+
+.clock-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #e8b15e, var(--accent));
+}
+
 .panel {
   padding: 1rem;
   border-radius: 1.35rem;

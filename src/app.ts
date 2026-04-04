@@ -11,11 +11,20 @@ import {
 import { loadState, resetState, saveState } from './game/storage';
 import type { GameState, LogEntry } from './game/types';
 
+const AUTO_DAY_MS = 60_000;
+
 const formatDate = (value: string): string =>
   new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
   }).format(new Date(`${value}T12:00:00`));
+
+const formatCountdown = (secondsRemaining: number): string => {
+  const minutes = Math.floor(secondsRemaining / 60);
+  const seconds = secondsRemaining % 60;
+
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+};
 
 const logToneClass = (tone: LogEntry['tone']): string => {
   if (tone === 'trade') {
@@ -129,10 +138,11 @@ const renderProductCard = (state: GameState, productId: string): string => {
   `;
 };
 
-const render = (state: GameState, flash: string): string => {
+const render = (state: GameState, flash: string, secondsRemaining: number): string => {
   const inventoryValue = getInventoryValue(state);
   const usedCapacity = getUsedCapacity(state);
   const netWorth = state.cash + inventoryValue;
+  const countdownProgress = ((AUTO_DAY_MS - secondsRemaining * 1000) / AUTO_DAY_MS) * 100;
 
   return `
     <main class="shell">
@@ -151,6 +161,19 @@ const render = (state: GameState, flash: string): string => {
           Buy fictional same-day goods before demand shifts. Sell into strength before your
           warehouse fills with dead weight.
         </p>
+        <section class="clock-card" aria-label="Market clock">
+          <div class="clock-copy">
+            <span class="clock-label">Next Market Day</span>
+            <strong>${formatCountdown(secondsRemaining)}</strong>
+          </div>
+          <div class="clock-copy">
+            <span class="clock-label">Cadence</span>
+            <span class="clock-note">1 live minute = 1 day</span>
+          </div>
+          <div class="clock-bar" aria-hidden="true">
+            <span style="width: ${countdownProgress.toFixed(2)}%"></span>
+          </div>
+        </section>
         <div class="hero-actions">
           <button class="primary" data-action="advance-day">Advance Day</button>
           <button class="secondary" data-action="reset-run">Reset Run</button>
@@ -226,9 +249,49 @@ const render = (state: GameState, flash: string): string => {
 export const mountApp = (root: HTMLDivElement): void => {
   let state = loadState();
   let flash = state.logs[0]?.text ?? 'Warehouse board ready.';
+  let timerAnchorMs = Date.now();
+  let secondsRemaining = Math.ceil(AUTO_DAY_MS / 1000);
 
   const rerender = (): void => {
-    root.innerHTML = render(state, flash);
+    root.innerHTML = render(state, flash, secondsRemaining);
+  };
+
+  const refreshCountdown = (now: number): void => {
+    const elapsed = now - timerAnchorMs;
+    const remainingMs = AUTO_DAY_MS - (elapsed % AUTO_DAY_MS || 0);
+    secondsRemaining = Math.max(1, Math.ceil(remainingMs / 1000));
+  };
+
+  const applyDayAdvance = (dayCount: number, source: 'auto' | 'manual'): void => {
+    const resultMessages: string[] = [];
+
+    for (let index = 0; index < dayCount; index += 1) {
+      const result = advanceDay(state);
+      state = result.state;
+      resultMessages.push(result.message);
+    }
+
+    const finalMessage = resultMessages.at(-1) ?? 'Another market day rolled over.';
+    flash =
+      source === 'auto' && dayCount > 1
+        ? `${dayCount} market days elapsed while the board stayed open. ${finalMessage}`
+        : source === 'auto'
+          ? `Market day rolled automatically. ${finalMessage}`
+          : finalMessage;
+    saveState(state);
+  };
+
+  const tickClock = (): void => {
+    const now = Date.now();
+    const elapsedDays = Math.floor((now - timerAnchorMs) / AUTO_DAY_MS);
+
+    if (elapsedDays > 0) {
+      applyDayAdvance(elapsedDays, 'auto');
+      timerAnchorMs += elapsedDays * AUTO_DAY_MS;
+    }
+
+    refreshCountdown(now);
+    rerender();
   };
 
   root.addEventListener('click', (event) => {
@@ -242,10 +305,9 @@ export const mountApp = (root: HTMLDivElement): void => {
     const action = button.dataset.action;
 
     if (action === 'advance-day') {
-      const result = advanceDay(state);
-      state = result.state;
-      flash = result.message;
-      saveState(state);
+      applyDayAdvance(1, 'manual');
+      timerAnchorMs = Date.now();
+      refreshCountdown(timerAnchorMs);
       rerender();
       return;
     }
@@ -259,6 +321,8 @@ export const mountApp = (root: HTMLDivElement): void => {
 
       state = resetState();
       flash = 'Opened a fresh board.';
+      timerAnchorMs = Date.now();
+      refreshCountdown(timerAnchorMs);
       rerender();
       return;
     }
@@ -283,5 +347,20 @@ export const mountApp = (root: HTMLDivElement): void => {
     rerender();
   });
 
+  const timerId = window.setInterval(tickClock, 1_000);
+  document.addEventListener('visibilitychange', tickClock);
+  window.addEventListener('focus', tickClock);
+
+  refreshCountdown(Date.now());
   rerender();
+
+  window.addEventListener(
+    'beforeunload',
+    () => {
+      window.clearInterval(timerId);
+      document.removeEventListener('visibilitychange', tickClock);
+      window.removeEventListener('focus', tickClock);
+    },
+    { once: true },
+  );
 };

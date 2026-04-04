@@ -80,6 +80,7 @@ curl -I https://autofac.io
 - The first playable loop lives in plain TypeScript modules under `src/game/`; keep simulation logic there and keep `src/app.ts` focused on rendering and input wiring.
 - Local persistence uses `localStorage` key `autofac-save-v2`. If the save schema changes, version it deliberately instead of trying to infer migrations ad hoc.
 - Day advancement currently moves each product by season factor, volatility pulse, buyer pull, and restock. Manual trades also nudge spot price, so trade impact is already part of the economy model.
+- The in-session market clock is managed in `src/app.ts` with a one-minute anchor timestamp, a one-second UI tick, and catch-up advancement when the browser delays execution. Manual day advancement resets the clock back to a full minute.
 - Rival desks now live in the same daily simulation pass as the market update. They should continue to trade against the same supply pool rather than a separate hidden market.
 - Custom-domain deployment artifact is supplied by `public/CNAME`, which Vite copies into `dist/` during `npm run build`.
 
