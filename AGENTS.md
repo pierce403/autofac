@@ -55,6 +55,21 @@ Keep entries concrete. Prefer exact commands, paths, and examples over general a
 - Favor deterministic or seedable simulation helpers where practical so balancing is testable.
 - Treat the first playable loop as: advance day, buy inventory, sell inventory, observe demand and price movement.
 
+## Build and Verification
+
+Verified on 2026-04-04:
+
+```bash
+npm install
+npm run check
+npm run build
+```
+
+## Known Pitfalls
+
+- Before `npm install`, `npm run check` may resolve to an older system `tsc` and report options as invalid. Install project dependencies first, then rerun the npm scripts.
+- `vite.config.ts` currently uses `base: './'` so the built app stays compatible with static subdirectory hosting.
+
 ## Rapport Notes
 
 - The collaborator wants visible momentum: start with a large TODO, then work through it.

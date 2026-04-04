@@ -1,0 +1,17 @@
+{
+  "name": "autofac",
+  "version": "0.1.0",
+  "description": "A mobile-first warehouse speculation game",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "check": "tsc --noEmit",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^7.1.11"
+  }
+}

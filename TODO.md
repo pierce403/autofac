@@ -4,7 +4,6 @@
 
 ## Active / In Progress
 
-- [ ] **[SETUP-3]** Bootstrap the static mobile-first app stack with Vite + TypeScript and a GitHub Pages-friendly build
 - [ ] **[GAME-1]** Implement the first playable market loop: day advance, cash, inventory, demand-driven pricing
 - [ ] **[GAME-2]** Add rival speculator activity that competes for scarce warehouse supply
 
@@ -46,3 +45,4 @@
 
 - [x] **[SETUP-1]** Initialize git repo with `main` as default branch - 2026-04-04
 - [x] **[SETUP-2]** Create `AGENTS.md` and the initial execution-focused `TODO.md` - 2026-04-04
+- [x] **[SETUP-3]** Bootstrap the static mobile-first app stack with Vite + TypeScript and a GitHub Pages-friendly build - 2026-04-04
