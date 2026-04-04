@@ -73,6 +73,7 @@ curl -I https://autofac.io
 - Before `npm install`, `npm run check` may resolve to an older system `tsc` and report options as invalid. Install project dependencies first, then rerun the npm scripts.
 - `vite.config.ts` currently uses `base: './'` so the built app stays compatible with static subdirectory hosting.
 - GitHub Pages for `pierce403/autofac` is configured for `build_type: workflow` and custom domain `autofac.io`. Without `.github/workflows/deploy-pages.yml`, the domain serves a GitHub 404 even when DNS and certificate state are already correct.
+- GitHub’s Pages artifact chain still emits Node 20 deprecation warnings unless the workflow sets `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true`. Keep that env block in the workflow until the underlying action stops pinning Node 20.
 
 ## Current Architecture Notes
 
