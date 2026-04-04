@@ -73,8 +73,9 @@ npm run build
 ## Current Architecture Notes
 
 - The first playable loop lives in plain TypeScript modules under `src/game/`; keep simulation logic there and keep `src/app.ts` focused on rendering and input wiring.
-- Local persistence uses `localStorage` key `autofac-save-v1`. If the save schema changes, version it deliberately instead of trying to infer migrations ad hoc.
+- Local persistence uses `localStorage` key `autofac-save-v2`. If the save schema changes, version it deliberately instead of trying to infer migrations ad hoc.
 - Day advancement currently moves each product by season factor, volatility pulse, buyer pull, and restock. Manual trades also nudge spot price, so trade impact is already part of the economy model.
+- Rival desks now live in the same daily simulation pass as the market update. They should continue to trade against the same supply pool rather than a separate hidden market.
 
 ## Rapport Notes
 

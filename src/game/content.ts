@@ -1,4 +1,4 @@
-import type { ProductDefinition } from './types';
+import type { ProductDefinition, RivalDefinition } from './types';
 
 export const PRODUCTS: ProductDefinition[] = [
   {
@@ -78,5 +78,29 @@ export const PRODUCTS: ProductDefinition[] = [
     volatility: 0.07,
     priceElasticity: 0.05,
     peakMonth: 5,
+  },
+];
+
+export const RIVALS: RivalDefinition[] = [
+  {
+    id: 'heatstreet-desk',
+    name: 'Heatstreet Desk',
+    style: 'seasonal',
+    description: 'Front-runs obvious calendar shifts and unloads fast once demand peaks.',
+    startingCash: 18000,
+  },
+  {
+    id: 'latchkey-desk',
+    name: 'Latchkey Desk',
+    style: 'scalper',
+    description: 'Pounces on tightening supply and short-lived buying rushes.',
+    startingCash: 16500,
+  },
+  {
+    id: 'mossline-desk',
+    name: 'Mossline Desk',
+    style: 'value',
+    description: 'Accumulates neglected staples and waits for cleaner exits.',
+    startingCash: 21000,
   },
 ];

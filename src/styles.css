@@ -214,6 +214,10 @@ body::before {
   gap: 0.85rem;
 }
 
+.rival-grid .rival-card {
+  background: rgba(248, 242, 232, 0.86);
+}
+
 .product-card {
   display: grid;
   gap: 0.8rem;
@@ -390,6 +394,10 @@ button:disabled {
 
 .log-copy.trade {
   color: var(--positive);
+}
+
+.log-copy.rival {
+  color: var(--accent-deep);
 }
 
 .log-copy.warning {

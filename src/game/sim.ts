@@ -1,10 +1,12 @@
-import { PRODUCTS } from './content';
+import { PRODUCTS, RIVALS } from './content';
 import type {
   GameState,
   HoldingState,
   LogEntry,
   MarketState,
   ProductDefinition,
+  RivalState,
+  RivalStyle,
   SimulationResult,
 } from './types';
 
@@ -86,6 +88,17 @@ const createHoldings = (): Record<string, HoldingState> =>
     ]),
   );
 
+const createRivals = (): RivalState[] =>
+  RIVALS.map((rival) => ({
+    id: rival.id,
+    name: rival.name,
+    style: rival.style,
+    cash: rival.startingCash,
+    holdings: createHoldings(),
+    description: rival.description,
+    lastAction: 'Watching the opening board.',
+  }));
+
 const createMarkets = (): Record<string, MarketState> =>
   Object.fromEntries(
     PRODUCTS.map((product) => [
@@ -104,7 +117,7 @@ const createMarkets = (): Record<string, MarketState> =>
   );
 
 export const createInitialState = (): GameState => ({
-  version: 1,
+  version: 2,
   day: 1,
   currentDate: START_DATE,
   cash: 25000,
@@ -112,6 +125,7 @@ export const createInitialState = (): GameState => ({
   warehouseCapacity: 24,
   holdings: createHoldings(),
   markets: createMarkets(),
+  rivals: createRivals(),
   logs: [
     {
       day: 1,
@@ -182,6 +196,12 @@ const copyState = (state: GameState): GameState => ({
   markets: Object.fromEntries(
     Object.entries(state.markets).map(([productId, market]) => [productId, { ...market }]),
   ),
+  rivals: state.rivals.map((rival) => ({
+    ...rival,
+    holdings: Object.fromEntries(
+      Object.entries(rival.holdings).map(([productId, holding]) => [productId, { ...holding }]),
+    ),
+  })),
   logs: [...state.logs],
 });
 
@@ -279,6 +299,160 @@ const buildMarketNote = (
   return 'Traffic looks orderly for now.';
 };
 
+const getRivalExposure = (rival: RivalState): number =>
+  PRODUCTS.reduce((total, product) => total + rival.holdings[product.id].quantity, 0);
+
+const styleLabel = (style: RivalStyle): string => {
+  if (style === 'seasonal') {
+    return 'seasonal desk';
+  }
+
+  if (style === 'scalper') {
+    return 'scalper desk';
+  }
+
+  return 'value desk';
+};
+
+const rivalSellTarget = (style: RivalStyle): number => {
+  if (style === 'scalper') {
+    return 0.08;
+  }
+
+  if (style === 'seasonal') {
+    return 0.11;
+  }
+
+  return 0.14;
+};
+
+const scoreBuyTarget = (
+  style: RivalStyle,
+  product: ProductDefinition,
+  market: MarketState,
+): number => {
+  const premium = (market.price - product.basePrice) / product.basePrice;
+  const scarcity = clamp((product.baseSupply - market.supply) / product.baseSupply, -0.4, 0.8);
+  const stability = 1 - Math.abs(market.demandIndex - 1);
+
+  if (style === 'seasonal') {
+    return market.seasonFactor * 0.9 + (market.demandIndex - 1) * 0.65 - premium * 0.55;
+  }
+
+  if (style === 'scalper') {
+    return scarcity * 1.2 + (market.demandIndex - 1) * 0.85 - premium * 0.3;
+  }
+
+  return (product.basePrice - market.price) / product.basePrice + stability * 0.45 - scarcity * 0.15;
+};
+
+const sellFromRival = (
+  state: GameState,
+  rival: RivalState,
+  product: ProductDefinition,
+  quantity: number,
+): string | null => {
+  const market = state.markets[product.id];
+  const holding = rival.holdings[product.id];
+  const executableQuantity = Math.min(quantity, holding.quantity);
+
+  if (executableQuantity <= 0) {
+    return null;
+  }
+
+  const proceeds = roundMoney(executableQuantity * market.price);
+  rival.cash = roundMoney(rival.cash + proceeds);
+  rival.holdings[product.id] = updateHoldingAfterSell(holding, executableQuantity);
+  state.markets[product.id].supply += executableQuantity;
+  state.markets[product.id].price = roundMoney(
+    market.price * (1 - executableQuantity / Math.max(product.baseSupply * 26, 1)),
+  );
+
+  return `${rival.name} unloaded ${executableQuantity} ${product.name}.`;
+};
+
+const buyForRival = (
+  state: GameState,
+  rival: RivalState,
+  product: ProductDefinition,
+  quantity: number,
+): string | null => {
+  const market = state.markets[product.id];
+  const affordableQuantity = Math.floor(rival.cash / market.price);
+  const executableQuantity = Math.min(quantity, market.supply, affordableQuantity);
+
+  if (executableQuantity <= 0) {
+    return null;
+  }
+
+  const spend = roundMoney(executableQuantity * market.price);
+  rival.cash = roundMoney(rival.cash - spend);
+  rival.holdings[product.id] = updateHoldingAfterBuy(
+    rival.holdings[product.id],
+    executableQuantity,
+    market.price,
+  );
+  state.markets[product.id].supply -= executableQuantity;
+  state.markets[product.id].price = roundMoney(
+    market.price * (1 + executableQuantity / Math.max(product.baseSupply * 14, 1)),
+  );
+
+  return `${rival.name} accumulated ${executableQuantity} ${product.name}.`;
+};
+
+const simulateRivalAction = (state: GameState, rival: RivalState): string | null => {
+  const sellCandidate = PRODUCTS.map((product) => {
+    const market = state.markets[product.id];
+    const holding = rival.holdings[product.id];
+
+    if (holding.quantity <= 0) {
+      return null;
+    }
+
+    const margin = (market.price - holding.averageCost) / Math.max(holding.averageCost, 1);
+    const offSeasonPenalty = market.seasonFactor < 0.92 ? 0.08 : 0;
+    const score = margin + offSeasonPenalty;
+
+    return {
+      product,
+      holding,
+      score,
+      margin,
+    };
+  })
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+    .sort((left, right) => right.score - left.score)[0];
+
+  if (sellCandidate && sellCandidate.margin >= rivalSellTarget(rival.style)) {
+    const quantity = clamp(
+      Math.ceil(sellCandidate.holding.quantity * (rival.style === 'scalper' ? 0.7 : 0.45)),
+      1,
+      6,
+    );
+    return sellFromRival(state, rival, sellCandidate.product, quantity);
+  }
+
+  const buyCandidate = PRODUCTS.map((product) => ({
+    product,
+    score: scoreBuyTarget(rival.style, product, state.markets[product.id]),
+  }))
+    .sort((left, right) => right.score - left.score)[0];
+
+  if (!buyCandidate || buyCandidate.score < 0.92) {
+    rival.lastAction = `${rival.name} stayed patient.`;
+    return null;
+  }
+
+  const desiredQuantity =
+    rival.style === 'scalper'
+      ? Math.round(randomBetween(3, 7))
+      : rival.style === 'seasonal'
+        ? Math.round(randomBetween(2, 6))
+        : Math.round(randomBetween(2, 5));
+
+  return buyForRival(state, rival, buyCandidate.product, desiredQuantity);
+};
+
 export const advanceDay = (state: GameState): SimulationResult => {
   const next = copyState(state);
   const nextDate = parseDate(state.currentDate);
@@ -325,10 +499,25 @@ export const advanceDay = (state: GameState): SimulationResult => {
     summaries[0] ??
     'Demand rotated quietly today. No single product took over the board.';
 
+  const rivalNotes = next.rivals
+    .map((rival) => {
+      const note = simulateRivalAction(next, rival);
+      rival.lastAction = note ?? `${rival.name} stayed patient as a ${styleLabel(rival.style)}.`;
+      return note;
+    })
+    .filter((note): note is string => Boolean(note));
+
+  let resultState = withLog(next, summary, 'note');
+
+  for (const note of rivalNotes) {
+    resultState = withLog(resultState, note, 'rival');
+  }
+
   return {
     ok: true,
-    message: summary,
-    state: withLog(next, summary, 'note'),
+    message:
+      rivalNotes[0] ?? summary,
+    state: resultState,
   };
 };
 

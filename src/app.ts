@@ -22,11 +22,48 @@ const logToneClass = (tone: LogEntry['tone']): string => {
     return 'trade';
   }
 
+  if (tone === 'rival') {
+    return 'rival';
+  }
+
   if (tone === 'warning') {
     return 'warning';
   }
 
   return 'note';
+};
+
+const rivalStyleLabel = (value: string): string => value.replace(/^\w/, (match) => match.toUpperCase());
+
+const renderRivalCard = (state: GameState, rivalId: string): string => {
+  const rival = state.rivals.find((entry) => entry.id === rivalId);
+
+  if (!rival) {
+    return '';
+  }
+
+  const exposure = Object.values(rival.holdings).reduce(
+    (total, holding) => total + holding.quantity,
+    0,
+  );
+
+  return `
+    <article class="rival-card">
+      <div class="product-topline">
+        <div>
+          <p class="card-kicker">Rival Desk</p>
+          <h3>${rival.name}</h3>
+        </div>
+        <div class="spot-price">${formatMoney(rival.cash)}</div>
+      </div>
+      <div class="chip-row">
+        <span class="chip neutral">${rivalStyleLabel(rival.style)}</span>
+        <span class="chip neutral">${exposure} units open</span>
+      </div>
+      <p class="product-description">${rival.description}</p>
+      <p class="market-note">${rival.lastAction}</p>
+    </article>
+  `;
 };
 
 const renderProductCard = (state: GameState, productId: string): string => {
@@ -151,6 +188,16 @@ const render = (state: GameState, flash: string): string => {
         </div>
         <div class="product-grid">
           ${PRODUCTS.map((product) => renderProductCard(state, product.id)).join('')}
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Rival Desks</h2>
+          <span class="pill subtle">${state.rivals.length} active</span>
+        </div>
+        <div class="product-grid rival-grid">
+          ${state.rivals.map((rival) => renderRivalCard(state, rival.id)).join('')}
         </div>
       </section>
 
