@@ -1,8 +1,92 @@
-import { createInitialState } from './sim';
+import { PRODUCTS } from './content';
+import { createInitialState, getSeasonFactor } from './sim';
 import type { GameState, PricePoint } from './types';
 
-const STORAGE_KEY = 'autofac-save-v6';
-const LEGACY_STORAGE_KEYS = ['autofac-save-v5', 'autofac-save-v4', 'autofac-save-v3'] as const;
+const STORAGE_KEY = 'autofac-save-v7';
+const LEGACY_STORAGE_KEYS = [
+  'autofac-save-v6',
+  'autofac-save-v5',
+  'autofac-save-v4',
+  'autofac-save-v3',
+] as const;
+
+const LEGACY_V6_BASELINES = {
+  'solshade-lotion': { basePrice: 18, baseSupply: 58 },
+  'draftpod-fan': { basePrice: 34, baseSupply: 42 },
+  'brightnest-tabs': { basePrice: 14, baseSupply: 64 },
+  'quickpatch-roll': { basePrice: 22, baseSupply: 38 },
+  'hearthleaf-sachets': { basePrice: 12, baseSupply: 72 },
+  'pawprint-bites': { basePrice: 16, baseSupply: 76 },
+} as const;
+
+const CURRENT_PRODUCTS = Object.fromEntries(PRODUCTS.map((product) => [product.id, product]));
+
+const clamp = (value: number, min: number, max: number): number =>
+  Math.min(max, Math.max(min, value));
+
+const roundMoney = (value: number): number => Math.round(value * 100) / 100;
+
+const monthDistance = (peakMonth: number, currentMonth: number): number => {
+  const diff = Math.abs(peakMonth - currentMonth);
+  return Math.min(diff, 12 - diff);
+};
+
+const describeDemand = (value: number): string => {
+  if (value >= 1.28) {
+    return 'Hot';
+  }
+
+  if (value >= 1.08) {
+    return 'Firm';
+  }
+
+  if (value <= 0.84) {
+    return 'Soft';
+  }
+
+  return 'Balanced';
+};
+
+const describeSeason = (productId: string, dateString: string): string => {
+  const product = CURRENT_PRODUCTS[productId];
+  const currentMonth = new Date(`${dateString}T12:00:00`).getMonth() + 1;
+  const distance = monthDistance(product.peakMonth, currentMonth);
+
+  if (distance === 0) {
+    return 'Peak season';
+  }
+
+  if (distance <= 1) {
+    return 'Season building';
+  }
+
+  if (distance >= 5) {
+    return 'Out of season';
+  }
+
+  return 'Steady demand';
+};
+
+const normalizePrice = (
+  price: number,
+  legacyBasePrice: number,
+  currentBasePrice: number,
+): number =>
+  clamp(
+    roundMoney((price / Math.max(legacyBasePrice, 1)) * currentBasePrice),
+    currentBasePrice * 0.58,
+    currentBasePrice * 2.4,
+  );
+
+const normalizePriceHistory = (
+  history: PricePoint[],
+  legacyBasePrice: number,
+  currentBasePrice: number,
+): PricePoint[] =>
+  history.map((point) => ({
+    ...point,
+    price: normalizePrice(point.price, legacyBasePrice, currentBasePrice),
+  }));
 
 interface LegacyMarketStateV3 {
   productId: string;
@@ -42,6 +126,10 @@ interface LegacyGameStateV5 extends Omit<GameState, 'version' | 'newsFeed'> {
   version: 5;
 }
 
+interface LegacyGameStateV6 extends GameState {
+  version: 6;
+}
+
 const migratePriceHistory = (
   history: number[],
   currentDay: number,
@@ -62,43 +150,151 @@ const migratePriceHistory = (
   return points;
 };
 
-const migrateV3State = (state: LegacyGameStateV3): GameState => ({
-  ...state,
-  version: 6,
-  markets: Object.fromEntries(
-    Object.entries(state.markets).map(([productId, market]) => [
-      productId,
-      {
-        ...market,
-        priceHistory: migratePriceHistory(market.priceHistory, state.day, market.price),
-        demandShock: 0,
-        supplyShock: 0,
-      },
-    ]),
-  ),
-  newsFeed: [],
-});
+const migrateV3State = (state: LegacyGameStateV3): GameState =>
+  migrateV6State({
+    ...state,
+    version: 6,
+    markets: Object.fromEntries(
+      Object.entries(state.markets).map(([productId, market]) => [
+        productId,
+        {
+          ...market,
+          priceHistory: migratePriceHistory(market.priceHistory, state.day, market.price),
+          demandShock: 0,
+          supplyShock: 0,
+        },
+      ]),
+    ),
+    newsFeed: [],
+  } as LegacyGameStateV6);
 
-const migrateV4State = (state: LegacyGameStateV4): GameState => ({
-  ...state,
-  version: 6,
-  markets: Object.fromEntries(
-    Object.entries(state.markets).map(([productId, market]) => [
-      productId,
-      {
-        ...market,
-        demandShock: 0,
-        supplyShock: 0,
-      },
-    ]),
-  ),
-  newsFeed: [],
-});
+const migrateV4State = (state: LegacyGameStateV4): GameState =>
+  migrateV6State({
+    ...state,
+    version: 6,
+    markets: Object.fromEntries(
+      Object.entries(state.markets).map(([productId, market]) => [
+        productId,
+        {
+          ...market,
+          demandShock: 0,
+          supplyShock: 0,
+        },
+      ]),
+    ),
+    newsFeed: [],
+  } as LegacyGameStateV6);
 
-const migrateV5State = (state: LegacyGameStateV5): GameState => ({
+const migrateV5State = (state: LegacyGameStateV5): GameState =>
+  migrateV6State({
+    ...state,
+    version: 6,
+    newsFeed: [],
+  } as LegacyGameStateV6);
+
+const migrateV6State = (state: LegacyGameStateV6): GameState => ({
   ...state,
-  version: 6,
+  version: 7,
+  holdings: Object.fromEntries(
+    Object.entries(state.holdings).map(([productId, holding]) => {
+      const legacy = LEGACY_V6_BASELINES[productId as keyof typeof LEGACY_V6_BASELINES];
+      const current = CURRENT_PRODUCTS[productId];
+
+      if (!legacy || !current || holding.quantity <= 0) {
+        return [
+          productId,
+          {
+            quantity: 0,
+            averageCost: 0,
+            listingPrice: null,
+          },
+        ];
+      }
+
+      return [
+        productId,
+        {
+          quantity: holding.quantity,
+          averageCost: normalizePrice(holding.averageCost, legacy.basePrice, current.basePrice),
+          listingPrice:
+            holding.listingPrice === null
+              ? null
+              : normalizePrice(holding.listingPrice, legacy.basePrice, current.basePrice),
+        },
+      ];
+    }),
+  ),
+  markets: Object.fromEntries(
+    Object.entries(state.markets).map(([productId, market]) => {
+      const legacy = LEGACY_V6_BASELINES[productId as keyof typeof LEGACY_V6_BASELINES];
+      const current = CURRENT_PRODUCTS[productId];
+
+      if (!legacy || !current) {
+        return [productId, market];
+      }
+
+      const supplyRatio = market.supply / Math.max(legacy.baseSupply, 1);
+
+      return [
+        productId,
+        {
+          ...market,
+          price: normalizePrice(market.price, legacy.basePrice, current.basePrice),
+          priceHistory: normalizePriceHistory(
+            market.priceHistory,
+            legacy.basePrice,
+            current.basePrice,
+          ),
+          supply: clamp(Math.round(supplyRatio * current.baseSupply), 0, current.baseSupply * 2),
+          demandLabel: describeDemand(market.demandIndex),
+          seasonFactor: roundMoney(getSeasonFactor(current, state.currentDate)),
+          seasonLabel: describeSeason(productId, state.currentDate),
+          note: 'Staple lanes are repricing after the catalog refresh.',
+        },
+      ];
+    }),
+  ),
+  rivals: state.rivals.map((rival) => ({
+    ...rival,
+    holdings: Object.fromEntries(
+      Object.entries(rival.holdings).map(([productId, holding]) => {
+        const legacy = LEGACY_V6_BASELINES[productId as keyof typeof LEGACY_V6_BASELINES];
+        const current = CURRENT_PRODUCTS[productId];
+
+        if (!legacy || !current || holding.quantity <= 0) {
+          return [
+            productId,
+            {
+              quantity: 0,
+              averageCost: 0,
+              listingPrice: null,
+            },
+          ];
+        }
+
+        return [
+          productId,
+          {
+            quantity: holding.quantity,
+            averageCost: normalizePrice(holding.averageCost, legacy.basePrice, current.basePrice),
+            listingPrice:
+              holding.listingPrice === null
+                ? null
+                : normalizePrice(holding.listingPrice, legacy.basePrice, current.basePrice),
+          },
+        ];
+      }),
+    ),
+    lastAction: `${rival.name} is repricing the refreshed staples board.`,
+  })),
   newsFeed: [],
+  logs: [
+    {
+      day: state.day,
+      text: 'Board rotated into staple foods and repeat-purchase toiletries. Existing positions were translated onto the refreshed catalog.',
+      tone: 'note',
+    },
+  ],
 });
 
 export const loadState = (): GameState => {
@@ -109,10 +305,26 @@ export const loadState = (): GameState => {
     }
 
     try {
-      const parsed = JSON.parse(raw) as GameState | LegacyGameStateV3 | LegacyGameStateV5;
+      const parsed = JSON.parse(raw) as
+        | GameState
+        | LegacyGameStateV3
+        | LegacyGameStateV4
+        | LegacyGameStateV5
+        | LegacyGameStateV6;
+
+      if (parsed.version === 7) {
+        return parsed as GameState;
+      }
 
       if (parsed.version === 6) {
-        return parsed as GameState;
+        const migrated = migrateV6State(parsed as LegacyGameStateV6);
+        saveState(migrated);
+
+        for (const legacyKey of LEGACY_STORAGE_KEYS) {
+          window.localStorage.removeItem(legacyKey);
+        }
+
+        return migrated;
       }
 
       if (parsed.version === 5) {

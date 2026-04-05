@@ -398,8 +398,8 @@ const render = (
           </div>
         </div>
         <p class="lede">
-          Buy fictional same-day goods before demand shifts. Sell into strength before your
-          warehouse fills with dead weight.
+          Trade fictional pantry staples and repeat-purchase toiletries before local demand shifts.
+          Sell into strength before your warehouse fills with dead stock.
         </p>
         <section class="hero-control-strip" aria-label="Market clock and controls">
           <div class="clock-donut-card">

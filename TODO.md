@@ -8,7 +8,7 @@
 
 ## Next Up
 
-- [ ] **[WORLD-2]** Create a roster of fictional household goods with seasonality, perishability, and storage profile metadata
+- [ ] **[WORLD-2]** Create a roster of fictional repeat-purchase staples with seasonality, perishability, and storage profile metadata
 - [ ] **[SIM-2]** Add warehouse replenishment rules, supplier lead times, and stockout behavior
 - [ ] **[SIM-3]** Add holding costs, spoilage/obsolescence risk, and inventory aging
 - [ ] **[SIM-4]** Add distinct buyer archetypes with different price sensitivity and urgency
@@ -22,7 +22,7 @@
 - [ ] **[SAVE-2]** Add reset/new-run flow with confirmation
 - [ ] **[BAL-1]** Tune the opening economy so early mistakes are recoverable without becoming trivial
 - [ ] **[BAL-2]** Add difficulty presets that change volatility, rival aggression, and replenishment rates
-- [ ] **[CONTENT-1]** Add more product categories: personal care, pantry, cleaning, office, pet, seasonal goods
+- [ ] **[CONTENT-1]** Add more staple categories: canned goods, noodles, baking goods, toiletries, oral care, paper goods
 - [ ] **[TECH-1]** Split simulation logic from UI so future multiplayer or server authority is possible
 - [ ] **[TECH-2]** Add deterministic seed support for replayable scenarios
 - [ ] **[TECH-3]** Add smoke tests for the daily simulation loop
@@ -51,3 +51,4 @@
 - [x] **[UX-7]** Convert the market board into a collapsible asset list with expand-all and collapse-all controls - 2026-04-05
 - [x] **[SIM-1]** Build a demand model with baseline demand, seasonal modifiers, price elasticity, and short-lived demand spikes - 2026-04-05
 - [x] **[CONTENT-2]** Add local news bulletins that create temporary demand and supply shocks across the district board - 2026-04-05
+- [x] **[CONTENT-3]** Refocus the opening catalog on repeat-purchase shelf-stable foods and toiletries - 2026-04-05

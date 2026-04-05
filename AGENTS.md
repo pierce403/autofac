@@ -17,11 +17,12 @@ Keep entries concrete. Prefer exact commands, paths, and examples over general a
 
 ## Project Overview
 
-**Autofac** is a mobile-first, local-only warehouse speculation game built as a static web app. The player buys and sells inventory in a fictional same-day delivery market while simulated buyers and rival speculators compete for profit.
+**Autofac** is a mobile-first, local-only warehouse speculation game built as a static web app. The player buys and sells inventory in a fictional local essentials market while simulated buyers and rival speculators compete for profit.
 
 ### Product Rules
 - Use fictional warehouse and product names only.
 - Do not reference real companies, brands, or marketplaces in copy or content.
+- Bias the opening catalog toward shelf-stable food staples and repeat-purchase toiletries rather than one-off gadgets or seasonal hard goods.
 - Keep the tone grounded in logistics and market simulation, not satire.
 
 ### Design Direction
@@ -85,7 +86,7 @@ npm run build
 ## Current Architecture Notes
 
 - The first playable loop lives in plain TypeScript modules under `src/game/`; keep simulation logic there and keep `src/app.ts` focused on rendering and input wiring.
-- Local persistence uses `localStorage` key `autofac-save-v6`. If the save schema changes, version it deliberately instead of trying to infer migrations ad hoc.
+- Local persistence uses `localStorage` key `autofac-save-v7`. If the save schema changes, version it deliberately instead of trying to infer migrations ad hoc.
 - Day advancement currently moves each product by season factor, volatility pulse, buyer pull, and restock. Manual trades also nudge spot price, so trade impact is already part of the economy model.
 - The in-session market clock is managed in `src/app.ts` with a one-minute anchor timestamp, a one-second UI tick, and catch-up advancement when the browser delays execution. Manual day advancement resets the clock back to a full minute.
 - Rival desks now live in the same daily simulation pass as the market update. They should continue to trade against the same supply pool rather than a separate hidden market.
@@ -99,7 +100,9 @@ npm run build
 - The pre-2026-04-05 market loop had a structural shortage ratchet: buyer pull drifted above restock for most products, supply shortages never triggered stronger replenishment, and price elasticity only affected price updates, not demand. That combination pushed several items into the hard cap and left them there.
 - The current market loop now carries persistent `demandShock` and `supplyShock` state per product, applies price-sensitive demand drag, and increases restock pressure when shortages or high prices persist. Temporary shocks still decay, so prices can run and then unwind instead of pinning.
 - The news/event layer is intentionally local, not macro/global. `src/game/content.ts` defines district-scale bulletins, `src/game/sim.ts` resolves them into temporary per-product demand/supply shifts, and `src/app.ts` renders them in the `Local Wire` panel. Keep event copy focused on neighborhood logistics, weather, local routes, utilities, and community demand pulses.
-- `GameState.newsFeed` now stores persisted bulletins with `startedDay`, `expiresDay`, and explicit `effects`; `src/game/storage.ts` migrates older `v5` saves by seeding an empty feed.
+- `GameState.newsFeed` now stores persisted bulletins with `startedDay`, `expiresDay`, and explicit `effects`; `src/game/storage.ts` clears stale bulletins while translating older catalogs onto the current staple-focused board.
+- The opening catalog now centers on repeat-purchase staples: flour, oats, rice, soap, toothpaste, and tissue. When adding products or events, prefer goods households rebuy regularly and keep local-wire bulletins tied to pantry refills, school routines, hygiene pushes, and bulk-delivery disruptions.
+- The shift from mixed goods to staple consumables required a catalog migration in `src/game/storage.ts`; `v6` saves are translated onto the refreshed board and old news/log entries are cleared so legacy prices do not carry gadget-era assumptions into the staple economy.
 
 ## Rapport Notes
 

@@ -303,7 +303,7 @@ const createMarkets = (): Record<string, MarketState> =>
   );
 
 export const createInitialState = (): GameState => ({
-  version: 6,
+  version: 7,
   day: 1,
   currentDate: START_DATE,
   cash: 1000,
@@ -316,7 +316,7 @@ export const createInitialState = (): GameState => ({
   logs: [
     {
       day: 1,
-      text: 'Opening bell. Inventory is available, but spring demand is already shifting.',
+      text: 'Opening bell. Staple inventory is live, and neighborhood refill demand is already shifting.',
       tone: 'note',
     },
   ],
