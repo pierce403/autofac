@@ -95,6 +95,7 @@ npm run build
 - `MarketState.priceHistory` now stores day-stamped price points rather than bare numbers. `src/game/storage.ts` migrates old `v3` saves into the new structure on load.
 - Market cards now render an actual SVG price chart, and the market board owns a global 7/30/365/All range switcher. Treat chart range as transient UI state in `src/app.ts`, not saved game state.
 - The hero clock is now a compact donut/two-button control cluster. Keep timer copy terse and keep the manual day/reset actions visually attached to that cluster.
+- The market board itself is now a single-column accordion asset list. Row expansion state is transient UI state in `src/app.ts`; collapsed rows must always surface current price, held quantity, and live P/L before the user opens the detailed trading view.
 
 ## Rapport Notes
 

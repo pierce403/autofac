@@ -52,6 +52,8 @@ const logToneClass = (tone: LogEntry['tone']): string => {
 
 const rivalStyleLabel = (value: string): string => value.replace(/^\w/, (match) => match.toUpperCase());
 const formatPercent = (value: number): string => `${value >= 0 ? '+' : ''}${(value * 100).toFixed(1)}%`;
+const getGainClass = (value: number): string =>
+  value > 0 ? 'gain-positive' : value < 0 ? 'gain-negative' : 'gain-neutral';
 
 const buildDailySeries = (
   history: PricePoint[],
@@ -178,6 +180,7 @@ const renderProductCard = (
   state: GameState,
   productId: string,
   chartWindow: ChartWindow,
+  isExpanded: boolean,
 ): string => {
   const product = getProduct(productId);
   const market = state.markets[productId];
@@ -191,12 +194,48 @@ const renderProductCard = (
       ? (market.price - holding.averageCost) / holding.averageCost
       : 0;
   const listingPrice = holding.listingPrice ?? market.price * 1.1;
+  const gainClass = getGainClass(holdingGain);
+  const holdingGainSummary =
+    holding.quantity > 0
+      ? `${formatMoney(holdingGain)} (${formatPercent(holdingReturn)})`
+      : '$0';
 
   return `
-    <article class="product-card">
-      <div class="product-topline">
-        <div>
+    <article class="product-card asset-card ${isExpanded ? 'expanded' : 'collapsed'}">
+      <button
+        class="asset-toggle"
+        data-action="toggle-asset"
+        data-product-id="${product.id}"
+        aria-expanded="${isExpanded ? 'true' : 'false'}"
+      >
+        <div class="asset-toggle-main">
           <p class="card-kicker">${product.category}</p>
+          <h3>${product.name}</h3>
+        </div>
+        <dl class="asset-summary">
+          <div>
+            <dt>Price</dt>
+            <dd>${formatMoney(market.price)}</dd>
+          </div>
+          <div>
+            <dt>Held</dt>
+            <dd>${holding.quantity}</dd>
+          </div>
+          <div>
+            <dt>P/L</dt>
+            <dd class="${gainClass}">${holdingGainSummary}</dd>
+          </div>
+        </dl>
+        <span class="asset-toggle-icon" aria-hidden="true">${isExpanded ? '-' : '+'}</span>
+      </button>
+      ${
+        !isExpanded
+          ? ''
+          : `
+      <div class="asset-details">
+        <div class="product-topline">
+        <div>
+          <p class="card-kicker">Spot Market</p>
           <h3>${product.name}</h3>
         </div>
         <div class="spot-price">${formatMoney(market.price)}</div>
@@ -228,11 +267,7 @@ const renderProductCard = (
         </div>
         <div>
           <dt>Gain/Loss</dt>
-          <dd class="${holdingGain >= 0 ? 'gain-positive' : 'gain-negative'}">${
-            holding.quantity > 0
-              ? `${formatMoney(holdingGain)} (${formatPercent(holdingReturn)})`
-              : 'None'
-          }</dd>
+          <dd class="${gainClass}">${holding.quantity > 0 ? holdingGainSummary : 'None'}</dd>
         </div>
         <div>
           <dt>Listing</dt>
@@ -263,6 +298,9 @@ const renderProductCard = (
           canSell ? '' : 'disabled'
         }>Listing +5%</button>
       </div>
+      </div>
+      `
+      }
     </article>
   `;
 };
@@ -272,6 +310,7 @@ const render = (
   flash: string,
   secondsRemaining: number,
   chartWindow: ChartWindow,
+  expandedProductIds: Set<string>,
 ): string => {
   const inventoryValue = getInventoryValue(state);
   const usedCapacity = getUsedCapacity(state);
@@ -347,6 +386,22 @@ const render = (
             <h2>Market Board</h2>
             <div class="panel-header-actions">
               <span class="pill">Single Player</span>
+              <div class="asset-view-actions" role="group" aria-label="Asset expansion controls">
+                <button
+                  class="asset-view-button"
+                  data-action="expand-all-assets"
+                  ${expandedProductIds.size === PRODUCTS.length ? 'disabled' : ''}
+                >
+                  Expand All
+                </button>
+                <button
+                  class="asset-view-button"
+                  data-action="collapse-all-assets"
+                  ${expandedProductIds.size === 0 ? 'disabled' : ''}
+                >
+                  Collapse All
+                </button>
+              </div>
               <div class="chart-window-switcher" role="group" aria-label="Price chart range">
                 ${CHART_WINDOWS.map((windowValue) => {
                   const isActive = chartWindow === windowValue;
@@ -364,8 +419,10 @@ const render = (
               </div>
             </div>
           </div>
-          <div class="product-grid">
-            ${PRODUCTS.map((product) => renderProductCard(state, product.id, chartWindow)).join('')}
+          <div class="product-grid market-list">
+            ${PRODUCTS.map((product) =>
+              renderProductCard(state, product.id, chartWindow, expandedProductIds.has(product.id)),
+            ).join('')}
           </div>
         </section>
 
@@ -410,9 +467,10 @@ export const mountApp = (root: HTMLDivElement): void => {
   let timerAnchorMs = Date.now();
   let secondsRemaining = Math.ceil(AUTO_DAY_MS / 1000);
   let chartWindow: ChartWindow = 30;
+  let expandedProductIds = new Set<string>();
 
   const rerender = (): void => {
-    root.innerHTML = render(state, flash, secondsRemaining, chartWindow);
+    root.innerHTML = render(state, flash, secondsRemaining, chartWindow, expandedProductIds);
   };
 
   const refreshCountdown = (now: number): void => {
@@ -477,6 +535,36 @@ export const mountApp = (root: HTMLDivElement): void => {
         rerender();
       }
 
+      return;
+    }
+
+    if (action === 'expand-all-assets') {
+      expandedProductIds = new Set(PRODUCTS.map((product) => product.id));
+      rerender();
+      return;
+    }
+
+    if (action === 'collapse-all-assets') {
+      expandedProductIds = new Set<string>();
+      rerender();
+      return;
+    }
+
+    if (action === 'toggle-asset') {
+      const productId = button.dataset.productId;
+
+      if (!productId) {
+        return;
+      }
+
+      const nextExpanded = new Set(expandedProductIds);
+      if (nextExpanded.has(productId)) {
+        nextExpanded.delete(productId);
+      } else {
+        nextExpanded.add(productId);
+      }
+      expandedProductIds = nextExpanded;
+      rerender();
       return;
     }
 

@@ -50,3 +50,4 @@
 - [x] **[UX-5]** Make the market layout read cleanly on desktop without compromising the mobile-first flow - 2026-04-04
 - [x] **[GAME-3]** Add listing automation, gain/loss visibility, and per-product price trails for held inventory - 2026-04-05
 - [x] **[UX-6]** Replace textual price trails with timeframe charts and compact the day controls into a donut timer cluster - 2026-04-05
+- [x] **[UX-7]** Convert the market board into a collapsible asset list with expand-all and collapse-all controls - 2026-04-05
