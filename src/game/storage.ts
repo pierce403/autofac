@@ -1,8 +1,8 @@
 import { createInitialState } from './sim';
 import type { GameState, PricePoint } from './types';
 
-const STORAGE_KEY = 'autofac-save-v5';
-const LEGACY_STORAGE_KEYS = ['autofac-save-v4', 'autofac-save-v3'] as const;
+const STORAGE_KEY = 'autofac-save-v6';
+const LEGACY_STORAGE_KEYS = ['autofac-save-v5', 'autofac-save-v4', 'autofac-save-v3'] as const;
 
 interface LegacyMarketStateV3 {
   productId: string;
@@ -16,7 +16,7 @@ interface LegacyMarketStateV3 {
   note: string;
 }
 
-interface LegacyGameStateV3 extends Omit<GameState, 'version' | 'markets'> {
+interface LegacyGameStateV3 extends Omit<GameState, 'version' | 'markets' | 'newsFeed'> {
   version: 3;
   markets: Record<string, LegacyMarketStateV3>;
 }
@@ -33,9 +33,13 @@ interface LegacyMarketStateV4 {
   note: string;
 }
 
-interface LegacyGameStateV4 extends Omit<GameState, 'version' | 'markets'> {
+interface LegacyGameStateV4 extends Omit<GameState, 'version' | 'markets' | 'newsFeed'> {
   version: 4;
   markets: Record<string, LegacyMarketStateV4>;
+}
+
+interface LegacyGameStateV5 extends Omit<GameState, 'version' | 'newsFeed'> {
+  version: 5;
 }
 
 const migratePriceHistory = (
@@ -60,7 +64,7 @@ const migratePriceHistory = (
 
 const migrateV3State = (state: LegacyGameStateV3): GameState => ({
   ...state,
-  version: 5,
+  version: 6,
   markets: Object.fromEntries(
     Object.entries(state.markets).map(([productId, market]) => [
       productId,
@@ -72,11 +76,12 @@ const migrateV3State = (state: LegacyGameStateV3): GameState => ({
       },
     ]),
   ),
+  newsFeed: [],
 });
 
 const migrateV4State = (state: LegacyGameStateV4): GameState => ({
   ...state,
-  version: 5,
+  version: 6,
   markets: Object.fromEntries(
     Object.entries(state.markets).map(([productId, market]) => [
       productId,
@@ -87,6 +92,13 @@ const migrateV4State = (state: LegacyGameStateV4): GameState => ({
       },
     ]),
   ),
+  newsFeed: [],
+});
+
+const migrateV5State = (state: LegacyGameStateV5): GameState => ({
+  ...state,
+  version: 6,
+  newsFeed: [],
 });
 
 export const loadState = (): GameState => {
@@ -97,10 +109,21 @@ export const loadState = (): GameState => {
     }
 
     try {
-      const parsed = JSON.parse(raw) as GameState | LegacyGameStateV3;
+      const parsed = JSON.parse(raw) as GameState | LegacyGameStateV3 | LegacyGameStateV5;
+
+      if (parsed.version === 6) {
+        return parsed as GameState;
+      }
 
       if (parsed.version === 5) {
-        return parsed as GameState;
+        const migrated = migrateV5State(parsed as LegacyGameStateV5);
+        saveState(migrated);
+
+        for (const legacyKey of LEGACY_STORAGE_KEYS) {
+          window.localStorage.removeItem(legacyKey);
+        }
+
+        return migrated;
       }
 
       if (parsed.version === 4) {

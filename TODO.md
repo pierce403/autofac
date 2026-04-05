@@ -23,7 +23,6 @@
 - [ ] **[BAL-1]** Tune the opening economy so early mistakes are recoverable without becoming trivial
 - [ ] **[BAL-2]** Add difficulty presets that change volatility, rival aggression, and replenishment rates
 - [ ] **[CONTENT-1]** Add more product categories: personal care, pantry, cleaning, office, pet, seasonal goods
-- [ ] **[CONTENT-2]** Add rare event cards: heat waves, dock delays, influencer surges, storm prep, recall rumors
 - [ ] **[TECH-1]** Split simulation logic from UI so future multiplayer or server authority is possible
 - [ ] **[TECH-2]** Add deterministic seed support for replayable scenarios
 - [ ] **[TECH-3]** Add smoke tests for the daily simulation loop
@@ -51,3 +50,4 @@
 - [x] **[UX-6]** Replace textual price trails with timeframe charts and compact the day controls into a donut timer cluster - 2026-04-05
 - [x] **[UX-7]** Convert the market board into a collapsible asset list with expand-all and collapse-all controls - 2026-04-05
 - [x] **[SIM-1]** Build a demand model with baseline demand, seasonal modifiers, price elasticity, and short-lived demand spikes - 2026-04-05
+- [x] **[CONTENT-2]** Add local news bulletins that create temporary demand and supply shocks across the district board - 2026-04-05

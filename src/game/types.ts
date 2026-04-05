@@ -33,6 +33,42 @@ export interface PricePoint {
   price: number;
 }
 
+export interface NewsImpact {
+  productId: string;
+  demandShift: number;
+  supplyShift: number;
+}
+
+export type NewsTone = 'warning' | 'tailwind' | 'watch';
+
+export interface NewsItem {
+  id: string;
+  templateId: string;
+  headline: string;
+  summary: string;
+  tone: NewsTone;
+  startedDay: number;
+  startedDate: string;
+  expiresDay: number;
+  effects: NewsImpact[];
+}
+
+export interface NewsTemplateEffect {
+  productIds: string[];
+  demandShiftRange?: [number, number];
+  supplyShiftRange?: [number, number];
+}
+
+export interface NewsTemplate {
+  id: string;
+  headline: string;
+  summary: string;
+  tone: NewsTone;
+  durationRange: [number, number];
+  activeMonths?: number[];
+  effects: NewsTemplateEffect[];
+}
+
 export interface MarketState {
   productId: string;
   price: number;
@@ -73,6 +109,7 @@ export interface GameState {
   holdings: Record<string, HoldingState>;
   markets: Record<string, MarketState>;
   rivals: RivalState[];
+  newsFeed: NewsItem[];
   logs: LogEntry[];
 }
 

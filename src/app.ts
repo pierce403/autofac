@@ -11,7 +11,7 @@ import {
   setListingPrice,
 } from './game/sim';
 import { loadState, resetState, saveState } from './game/storage';
-import type { GameState, LogEntry, MarketState, PricePoint } from './game/types';
+import type { GameState, LogEntry, MarketState, NewsItem, PricePoint } from './game/types';
 
 const AUTO_DAY_MS = 60_000;
 const CHART_WINDOWS = [7, 30, 365, 'all'] as const;
@@ -34,6 +34,8 @@ const formatCountdown = (secondsRemaining: number): string => {
 const formatChartWindow = (value: ChartWindow): string =>
   value === 'all' ? 'All' : `${value}D`;
 
+const isNewsActive = (item: NewsItem, currentDay: number): boolean => item.expiresDay >= currentDay;
+
 const logToneClass = (tone: LogEntry['tone']): string => {
   if (tone === 'trade') {
     return 'trade';
@@ -54,6 +56,50 @@ const rivalStyleLabel = (value: string): string => value.replace(/^\w/, (match) 
 const formatPercent = (value: number): string => `${value >= 0 ? '+' : ''}${(value * 100).toFixed(1)}%`;
 const getGainClass = (value: number): string =>
   value > 0 ? 'gain-positive' : value < 0 ? 'gain-negative' : 'gain-neutral';
+
+const newsToneClass = (item: NewsItem, currentDay: number): string =>
+  `${item.tone} ${isNewsActive(item, currentDay) ? 'active' : 'settled'}`;
+
+const formatNewsScope = (item: NewsItem): string => {
+  const productNames = [...new Set(item.effects.map((effect) => getProduct(effect.productId).name))];
+
+  if (productNames.length >= PRODUCTS.length) {
+    return 'Whole local board';
+  }
+
+  if (productNames.length <= 2) {
+    return productNames.join(' + ');
+  }
+
+  return `${productNames[0]}, ${productNames[1]} +${productNames.length - 2}`;
+};
+
+const formatNewsImpact = (item: NewsItem): string => {
+  const demandShift = item.effects.reduce((total, effect) => total + effect.demandShift, 0);
+  const supplyShift = item.effects.reduce((total, effect) => total + effect.supplyShift, 0);
+
+  if (Math.abs(demandShift) >= 0.12 && Math.abs(supplyShift) >= 0.12) {
+    if (demandShift > 0 && supplyShift > 0) {
+      return 'Demand up, stock tight';
+    }
+
+    if (demandShift > 0 && supplyShift < 0) {
+      return 'Demand up, stock easing';
+    }
+
+    if (demandShift < 0 && supplyShift > 0) {
+      return 'Demand cool, stock tight';
+    }
+
+    return 'Demand cool, stock loose';
+  }
+
+  if (Math.abs(demandShift) >= Math.abs(supplyShift)) {
+    return demandShift >= 0 ? 'Demand lift' : 'Demand cooldown';
+  }
+
+  return supplyShift >= 0 ? 'Supply squeeze' : 'Supply relief';
+};
 
 const buildDailySeries = (
   history: PricePoint[],
@@ -173,6 +219,26 @@ const renderRivalCard = (state: GameState, rivalId: string): string => {
       <p class="product-description">${rival.description}</p>
       <p class="market-note">${rival.lastAction}</p>
     </article>
+  `;
+};
+
+const renderNewsCard = (state: GameState, item: NewsItem): string => {
+  const active = isNewsActive(item, state.day);
+  const daysRemaining = Math.max(0, item.expiresDay - state.day + 1);
+
+  return `
+    <li class="news-item ${newsToneClass(item, state.day)}">
+      <div class="news-topline">
+        <span class="card-kicker">Day ${item.startedDay} bulletin</span>
+        <span class="news-status">${active ? `${daysRemaining}d left` : 'Settled'}</span>
+      </div>
+      <h3>${item.headline}</h3>
+      <p class="news-copy">${item.summary}</p>
+      <div class="chip-row">
+        <span class="chip neutral">${formatNewsScope(item)}</span>
+        <span class="chip neutral">${formatNewsImpact(item)}</span>
+      </div>
+    </li>
   `;
 };
 
@@ -316,6 +382,7 @@ const render = (
   const usedCapacity = getUsedCapacity(state);
   const netWorth = state.cash + inventoryValue;
   const countdownProgress = ((AUTO_DAY_MS - secondsRemaining * 1000) / AUTO_DAY_MS) * 100;
+  const activeNewsCount = state.newsFeed.filter((item) => isNewsActive(item, state.day)).length;
 
   return `
     <main class="shell">
@@ -435,6 +502,27 @@ const render = (
             <div class="product-grid rival-grid">
               ${state.rivals.map((rival) => renderRivalCard(state, rival.id)).join('')}
             </div>
+          </section>
+
+          <section class="panel news-panel">
+            <div class="panel-header">
+              <h2>Local Wire</h2>
+              <span class="pill subtle">${activeNewsCount > 0 ? `${activeNewsCount} active` : 'Quiet board'}</span>
+            </div>
+            ${
+              state.newsFeed.length === 0
+                ? `
+                  <p class="news-empty">
+                    No district bulletins yet. Prices are moving on seasonal flow, buyer urgency,
+                    and rival trading.
+                  </p>
+                `
+                : `
+                  <ul class="news-list">
+                    ${state.newsFeed.map((item) => renderNewsCard(state, item)).join('')}
+                  </ul>
+                `
+            }
           </section>
 
           <section class="panel notes-panel">

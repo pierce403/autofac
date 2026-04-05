@@ -85,7 +85,7 @@ npm run build
 ## Current Architecture Notes
 
 - The first playable loop lives in plain TypeScript modules under `src/game/`; keep simulation logic there and keep `src/app.ts` focused on rendering and input wiring.
-- Local persistence uses `localStorage` key `autofac-save-v5`. If the save schema changes, version it deliberately instead of trying to infer migrations ad hoc.
+- Local persistence uses `localStorage` key `autofac-save-v6`. If the save schema changes, version it deliberately instead of trying to infer migrations ad hoc.
 - Day advancement currently moves each product by season factor, volatility pulse, buyer pull, and restock. Manual trades also nudge spot price, so trade impact is already part of the economy model.
 - The in-session market clock is managed in `src/app.ts` with a one-minute anchor timestamp, a one-second UI tick, and catch-up advancement when the browser delays execution. Manual day advancement resets the clock back to a full minute.
 - Rival desks now live in the same daily simulation pass as the market update. They should continue to trade against the same supply pool rather than a separate hidden market.
@@ -98,6 +98,8 @@ npm run build
 - The market board itself is now a single-column accordion asset list. Row expansion state is transient UI state in `src/app.ts`; collapsed rows must always surface current price, held quantity, and live P/L before the user opens the detailed trading view.
 - The pre-2026-04-05 market loop had a structural shortage ratchet: buyer pull drifted above restock for most products, supply shortages never triggered stronger replenishment, and price elasticity only affected price updates, not demand. That combination pushed several items into the hard cap and left them there.
 - The current market loop now carries persistent `demandShock` and `supplyShock` state per product, applies price-sensitive demand drag, and increases restock pressure when shortages or high prices persist. Temporary shocks still decay, so prices can run and then unwind instead of pinning.
+- The news/event layer is intentionally local, not macro/global. `src/game/content.ts` defines district-scale bulletins, `src/game/sim.ts` resolves them into temporary per-product demand/supply shifts, and `src/app.ts` renders them in the `Local Wire` panel. Keep event copy focused on neighborhood logistics, weather, local routes, utilities, and community demand pulses.
+- `GameState.newsFeed` now stores persisted bulletins with `startedDay`, `expiresDay`, and explicit `effects`; `src/game/storage.ts` migrates older `v5` saves by seeding an empty feed.
 
 ## Rapport Notes
 
@@ -105,3 +107,4 @@ npm run build
 - They want a strict commit cadence: initial commit at startup, then one commit per completed task.
 - They want recursive self-improvement behavior explicitly documented in this file.
 - They want the live site verified at the real domain, not just a successful Actions run.
+- They corrected the market framing from global optimization to local community-sized supply chains. New mechanics and copy should stay local-first unless they explicitly widen the scope again.

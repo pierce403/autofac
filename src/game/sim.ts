@@ -1,9 +1,11 @@
-import { PRODUCTS, RIVALS } from './content';
+import { NEWS_TEMPLATES, PRODUCTS, RIVALS } from './content';
 import type {
   GameState,
   HoldingState,
   LogEntry,
   MarketState,
+  NewsItem,
+  NewsTemplate,
   PricePoint,
   ProductDefinition,
   RivalState,
@@ -13,6 +15,8 @@ import type {
 
 const START_DATE = '2026-03-15';
 const MAX_LOGS = 14;
+const MAX_NEWS_FEED = 10;
+const MAX_ACTIVE_NEWS = 3;
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value));
@@ -81,6 +85,180 @@ const describeDemand = (value: number): string => {
   return 'Balanced';
 };
 
+interface ProductNewsPressure {
+  demandShift: number;
+  supplyShift: number;
+  headline: string | null;
+  strength: number;
+}
+
+const isNewsActive = (item: NewsItem, day: number): boolean => item.expiresDay >= day;
+
+const newsToneToLogTone = (tone: NewsItem['tone']): LogEntry['tone'] =>
+  tone === 'warning' ? 'warning' : 'note';
+
+const pruneNewsFeed = (feed: NewsItem[], currentDay: number): NewsItem[] => {
+  const active = feed.filter((item) => isNewsActive(item, currentDay));
+  const archived = feed.filter((item) => !isNewsActive(item, currentDay));
+
+  return [...active, ...archived].slice(0, MAX_NEWS_FEED);
+};
+
+const chooseNewsTemplate = (
+  dateString: string,
+  feed: NewsItem[],
+  currentDay: number,
+): NewsTemplate | null => {
+  const currentMonth = parseDate(dateString).getMonth() + 1;
+  const activeTemplateIds = new Set(
+    feed.filter((item) => isNewsActive(item, currentDay)).map((item) => item.templateId),
+  );
+  const eligible = NEWS_TEMPLATES.filter((template) => !activeTemplateIds.has(template.id));
+  const seasonallyEligible = eligible.filter(
+    (template) => !template.activeMonths || template.activeMonths.includes(currentMonth),
+  );
+  const pool = seasonallyEligible.length > 0 ? seasonallyEligible : eligible;
+
+  if (pool.length === 0) {
+    return null;
+  }
+
+  return pool[Math.floor(Math.random() * pool.length)] ?? null;
+};
+
+const createNewsItem = (day: number, dateString: string, template: NewsTemplate): NewsItem => {
+  const duration = Math.round(randomBetween(template.durationRange[0], template.durationRange[1]));
+  const effectMap = new Map<string, { demandShift: number; supplyShift: number }>();
+
+  for (const effect of template.effects) {
+    for (const productId of effect.productIds) {
+      const prev = effectMap.get(productId) ?? { demandShift: 0, supplyShift: 0 };
+      effectMap.set(productId, {
+        demandShift: roundMoney(
+          prev.demandShift +
+            (effect.demandShiftRange
+              ? randomBetween(effect.demandShiftRange[0], effect.demandShiftRange[1])
+              : 0),
+        ),
+        supplyShift: roundMoney(
+          prev.supplyShift +
+            (effect.supplyShiftRange
+              ? randomBetween(effect.supplyShiftRange[0], effect.supplyShiftRange[1])
+              : 0),
+        ),
+      });
+    }
+  }
+
+  return {
+    id: `${template.id}-${day}-${Math.round(Math.random() * 1_000_000)}`,
+    templateId: template.id,
+    headline: template.headline,
+    summary: template.summary,
+    tone: template.tone,
+    startedDay: day,
+    startedDate: dateString,
+    expiresDay: day + duration - 1,
+    effects: [...effectMap.entries()].map(([productId, effect]) => ({
+      productId,
+      demandShift: effect.demandShift,
+      supplyShift: effect.supplyShift,
+    })),
+  };
+};
+
+const maybeAddNewsItem = (feed: NewsItem[], day: number, dateString: string): NewsItem[] => {
+  const activeCount = feed.filter((item) => isNewsActive(item, day)).length;
+
+  if (activeCount >= MAX_ACTIVE_NEWS) {
+    return feed;
+  }
+
+  const spawnChance = activeCount === 0 ? 0.42 : activeCount === 1 ? 0.26 : 0.14;
+  if (Math.random() >= spawnChance) {
+    return feed;
+  }
+
+  const template = chooseNewsTemplate(dateString, feed, day);
+  if (!template) {
+    return feed;
+  }
+
+  return [createNewsItem(day, dateString, template), ...feed];
+};
+
+const buildNewsPressureMap = (
+  feed: NewsItem[],
+  currentDay: number,
+): Record<string, ProductNewsPressure> => {
+  const pressure = Object.fromEntries(
+    PRODUCTS.map((product) => [
+      product.id,
+      {
+        demandShift: 0,
+        supplyShift: 0,
+        headline: null,
+        strength: -1,
+      },
+    ]),
+  ) as Record<string, ProductNewsPressure>;
+
+  for (const item of feed) {
+    if (!isNewsActive(item, currentDay)) {
+      continue;
+    }
+
+    for (const effect of item.effects) {
+      const current = pressure[effect.productId];
+      if (!current) {
+        continue;
+      }
+
+      current.demandShift = clamp(current.demandShift + effect.demandShift, -0.28, 0.34);
+      current.supplyShift = clamp(current.supplyShift + effect.supplyShift, -0.22, 0.28);
+
+      const nextMagnitude = Math.abs(effect.demandShift) + Math.abs(effect.supplyShift);
+      if (nextMagnitude > current.strength) {
+        current.headline = item.headline;
+        current.strength = nextMagnitude;
+      }
+    }
+  }
+
+  return pressure;
+};
+
+const buildNewsLead = (
+  product: ProductDefinition,
+  pressure: ProductNewsPressure,
+): string | null => {
+  if (!pressure.headline) {
+    return null;
+  }
+
+  if (pressure.demandShift >= 0.08 && pressure.supplyShift >= 0.06) {
+    return `${pressure.headline} is pulling buyers forward while neighborhood restocks slow.`;
+  }
+
+  if (pressure.demandShift >= 0.08) {
+    return `${pressure.headline} is pushing more local buyers into ${product.category.toLowerCase()} lots.`;
+  }
+
+  if (pressure.demandShift <= -0.08) {
+    return `${pressure.headline} cooled buyer urgency for this lane.`;
+  }
+
+  if (pressure.supplyShift >= 0.06) {
+    return `${pressure.headline} is slowing nearby replenishment.`;
+  }
+
+  if (pressure.supplyShift <= -0.06) {
+    return `${pressure.headline} is easing local stock pressure.`;
+  }
+
+  return null;
+};
+
 const createHoldings = (): Record<string, HoldingState> =>
   Object.fromEntries(
     PRODUCTS.map((product) => [
@@ -125,7 +303,7 @@ const createMarkets = (): Record<string, MarketState> =>
   );
 
 export const createInitialState = (): GameState => ({
-  version: 5,
+  version: 6,
   day: 1,
   currentDate: START_DATE,
   cash: 1000,
@@ -134,6 +312,7 @@ export const createInitialState = (): GameState => ({
   holdings: createHoldings(),
   markets: createMarkets(),
   rivals: createRivals(),
+  newsFeed: [],
   logs: [
     {
       day: 1,
@@ -222,6 +401,10 @@ const copyState = (state: GameState): GameState => ({
     holdings: Object.fromEntries(
       Object.entries(rival.holdings).map(([productId, holding]) => [productId, { ...holding }]),
     ),
+  })),
+  newsFeed: state.newsFeed.map((item) => ({
+    ...item,
+    effects: item.effects.map((effect) => ({ ...effect })),
   })),
   logs: [...state.logs],
 });
@@ -315,20 +498,25 @@ const buildMarketNote = (
   demandIndex: number,
   seasonFactor: number,
   supply: number,
+  newsLead: string | null,
 ): string => {
+  const baseNote = (() => {
   if (seasonFactor >= 1.2 && demandIndex >= 1.12) {
-    return `${product.category} buyers are front-loading orders.`;
+      return `${product.category} buyers are front-loading orders.`;
   }
 
   if (supply <= Math.round(product.baseSupply * 0.45)) {
-    return 'Warehouse stock is tightening.';
+      return 'Warehouse stock is tightening.';
   }
 
   if (demandIndex <= 0.88) {
-    return 'Buyers are waiting for cheaper lots.';
+      return 'Buyers are waiting for cheaper lots.';
   }
 
-  return 'Traffic looks orderly for now.';
+    return 'Traffic looks orderly for now.';
+  })();
+
+  return newsLead ? `${newsLead} ${baseNote}` : baseNote;
 };
 
 const getRivalExposure = (rival: RivalState): number =>
@@ -502,11 +690,18 @@ export const advanceDay = (state: GameState): SimulationResult => {
 
   next.day += 1;
   next.currentDate = toDateString(nextDate);
+  next.newsFeed = pruneNewsFeed(next.newsFeed, next.day);
+  next.newsFeed = pruneNewsFeed(maybeAddNewsItem(next.newsFeed, next.day, next.currentDate), next.day);
+
+  const latestBulletin =
+    next.newsFeed[0] && next.newsFeed[0].startedDay === next.day ? next.newsFeed[0] : null;
+  const newsPressure = buildNewsPressureMap(next.newsFeed, next.day);
 
   const summaries: string[] = [];
 
   for (const product of PRODUCTS) {
     const market = next.markets[product.id];
+    const localPressure = newsPressure[product.id];
     const seasonFactor = getSeasonFactor(product, next.currentDate);
     const pricePremium = market.price / product.basePrice - 1;
     const demandShock = clamp(
@@ -523,14 +718,20 @@ export const advanceDay = (state: GameState): SimulationResult => {
       -0.28,
       0.36,
     );
+    const effectiveDemandShock = clamp(demandShock + localPressure.demandShift, -0.5, 0.65);
+    const effectiveSupplyShock = clamp(supplyShock + localPressure.supplyShift, -0.32, 0.42);
     const demandBase = product.baseDemand * seasonFactor;
     const priceDrag = clamp(
       1 - Math.max(-0.2, pricePremium * (0.78 + product.priceElasticity * 1.6)),
       0.62,
       1.28,
     );
-    const demandIndex = clamp(demandBase * (1 + demandShock) * priceDrag, 0.58, 1.95);
-    const shortageRatio = clamp((product.baseSupply - market.supply) / product.baseSupply, -0.45, 1.15);
+    const demandIndex = clamp(demandBase * (1 + effectiveDemandShock) * priceDrag, 0.58, 1.95);
+    const shortageRatio = clamp(
+      (product.baseSupply - market.supply) / product.baseSupply,
+      -0.45,
+      1.15,
+    );
     const buyerPull = Math.max(
       0,
       Math.round(
@@ -540,7 +741,10 @@ export const advanceDay = (state: GameState): SimulationResult => {
       ),
     );
     const restockMultiplier = clamp(
-      1 - supplyShock + Math.max(0, shortageRatio) * 0.55 + Math.max(0, pricePremium) * 0.32,
+      1 -
+        effectiveSupplyShock +
+        Math.max(0, shortageRatio) * 0.55 +
+        Math.max(0, pricePremium) * 0.32,
       0.4,
       1.95,
     );
@@ -557,7 +761,7 @@ export const advanceDay = (state: GameState): SimulationResult => {
       1 +
         (demandIndex - 1) * 0.72 +
         scarcity * 0.44 +
-        supplyShock * 0.24,
+        effectiveSupplyShock * 0.24,
       0.62,
       2.35,
     );
@@ -581,7 +785,13 @@ export const advanceDay = (state: GameState): SimulationResult => {
       seasonFactor: roundMoney(seasonFactor),
       demandLabel: describeDemand(demandIndex),
       seasonLabel: describeSeason(product, next.currentDate),
-      note: buildMarketNote(product, demandIndex, seasonFactor, supply),
+      note: buildMarketNote(
+        product,
+        demandIndex,
+        seasonFactor,
+        supply,
+        buildNewsLead(product, localPressure),
+      ),
     };
 
     if (demandIndex >= 1.22 || scarcity >= 0.35) {
@@ -589,9 +799,7 @@ export const advanceDay = (state: GameState): SimulationResult => {
     }
   }
 
-  const summary =
-    summaries[0] ??
-    'Demand rotated quietly today. No single product took over the board.';
+  const summary = summaries[0] ?? 'Demand rotated quietly today. No single product took over the board.';
 
   const rivalNotes = next.rivals
     .map((rival) => {
@@ -607,10 +815,17 @@ export const advanceDay = (state: GameState): SimulationResult => {
     resultState = withLog(resultState, note, 'rival');
   }
 
+  if (latestBulletin) {
+    resultState = withLog(
+      resultState,
+      `Local wire: ${latestBulletin.headline}`,
+      newsToneToLogTone(latestBulletin.tone),
+    );
+  }
+
   return {
     ok: true,
-    message:
-      rivalNotes[0] ?? summary,
+    message: latestBulletin ? `Local wire: ${latestBulletin.headline}` : rivalNotes[0] ?? summary,
     state: resultState,
   };
 };
