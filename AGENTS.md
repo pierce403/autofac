@@ -85,14 +85,16 @@ npm run build
 ## Current Architecture Notes
 
 - The first playable loop lives in plain TypeScript modules under `src/game/`; keep simulation logic there and keep `src/app.ts` focused on rendering and input wiring.
-- Local persistence uses `localStorage` key `autofac-save-v3`. If the save schema changes, version it deliberately instead of trying to infer migrations ad hoc.
+- Local persistence uses `localStorage` key `autofac-save-v4`. If the save schema changes, version it deliberately instead of trying to infer migrations ad hoc.
 - Day advancement currently moves each product by season factor, volatility pulse, buyer pull, and restock. Manual trades also nudge spot price, so trade impact is already part of the economy model.
 - The in-session market clock is managed in `src/app.ts` with a one-minute anchor timestamp, a one-second UI tick, and catch-up advancement when the browser delays execution. Manual day advancement resets the clock back to a full minute.
 - Rival desks now live in the same daily simulation pass as the market update. They should continue to trade against the same supply pool rather than a separate hidden market.
 - Custom-domain deployment artifact is supplied by `public/CNAME`, which Vite copies into `dist/` during `npm run build`.
 - The desktop layout now relies on `dashboard-layout` and `side-column` in `src/app.ts`/`src/styles.css`: market board on the left, rivals and notes on a sticky right rail, while mobile still collapses back to one column.
 - Holdings now track an optional per-product `listingPrice` in `src/game/types.ts`. Buying inventory auto-seeds the listing at +10% of the fill price, and `runAutoListings` in `src/game/sim.ts` liquidates holdings when spot price meets or beats that listing.
-- Market cards now expose a short `priceHistory` trail sourced from `MarketState.priceHistory`; keep chart/history additions compatible with this rolling list.
+- `MarketState.priceHistory` now stores day-stamped price points rather than bare numbers. `src/game/storage.ts` migrates old `v3` saves into the new structure on load.
+- Market cards now render an actual SVG price chart, and the market board owns a global 7/30/365/All range switcher. Treat chart range as transient UI state in `src/app.ts`, not saved game state.
+- The hero clock is now a compact donut/two-button control cluster. Keep timer copy terse and keep the manual day/reset actions visually attached to that cluster.
 
 ## Rapport Notes
 

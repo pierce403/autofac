@@ -4,6 +4,7 @@ import type {
   HoldingState,
   LogEntry,
   MarketState,
+  PricePoint,
   ProductDefinition,
   RivalState,
   RivalStyle,
@@ -12,7 +13,6 @@ import type {
 
 const START_DATE = '2026-03-15';
 const MAX_LOGS = 14;
-const MAX_PRICE_HISTORY = 16;
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value));
@@ -108,7 +108,7 @@ const createMarkets = (): Record<string, MarketState> =>
       {
         productId: product.id,
         price: product.basePrice,
-        priceHistory: [product.basePrice],
+        priceHistory: [{ day: 1, price: product.basePrice }],
         supply: product.baseSupply,
         demandIndex: product.baseDemand,
         seasonFactor: getSeasonFactor(product, START_DATE),
@@ -120,7 +120,7 @@ const createMarkets = (): Record<string, MarketState> =>
   );
 
 export const createInitialState = (): GameState => ({
-  version: 3,
+  version: 4,
   day: 1,
   currentDate: START_DATE,
   cash: 1000,
@@ -193,15 +193,15 @@ const updateHoldingAfterSell = (holding: HoldingState, quantity: number): Holdin
   };
 };
 
-const appendPriceHistory = (history: number[], nextPrice: number): number[] => {
+const appendPriceHistory = (history: PricePoint[], day: number, nextPrice: number): PricePoint[] => {
   const normalizedPrice = roundMoney(nextPrice);
   const prevPrice = history.at(-1);
 
-  if (prevPrice === normalizedPrice) {
+  if (prevPrice && prevPrice.day === day && prevPrice.price === normalizedPrice) {
     return history;
   }
 
-  return [...history, normalizedPrice].slice(-MAX_PRICE_HISTORY);
+  return [...history, { day, price: normalizedPrice }];
 };
 
 const copyState = (state: GameState): GameState => ({
@@ -252,6 +252,7 @@ export const buyUnits = (
   );
   next.markets[productId].priceHistory = appendPriceHistory(
     market.priceHistory,
+    state.day,
     next.markets[productId].price,
   );
   next.holdings[productId].listingPrice = roundMoney(market.price * 1.1);
@@ -293,6 +294,7 @@ export const sellUnits = (
   );
   next.markets[productId].priceHistory = appendPriceHistory(
     market.priceHistory,
+    state.day,
     next.markets[productId].price,
   );
 
@@ -394,6 +396,7 @@ const sellFromRival = (
   );
   state.markets[product.id].priceHistory = appendPriceHistory(
     market.priceHistory,
+    state.day,
     state.markets[product.id].price,
   );
 
@@ -427,6 +430,7 @@ const buyForRival = (
   );
   state.markets[product.id].priceHistory = appendPriceHistory(
     market.priceHistory,
+    state.day,
     state.markets[product.id].price,
   );
 
@@ -515,7 +519,7 @@ export const advanceDay = (state: GameState): SimulationResult => {
     next.markets[product.id] = {
       ...market,
       price,
-      priceHistory: appendPriceHistory(market.priceHistory, price),
+      priceHistory: appendPriceHistory(market.priceHistory, next.day, price),
       supply,
       demandIndex: roundMoney(demandIndex),
       seasonFactor: roundMoney(seasonFactor),
@@ -635,6 +639,7 @@ export const runAutoListings = (state: GameState): SimulationResult => {
     );
     next.markets[product.id].priceHistory = appendPriceHistory(
       market.priceHistory,
+      next.day,
       next.markets[product.id].price,
     );
     sales.push(`Auto-sold ${quantity} ${product.name} at ${formatMoney(market.price)}.`);

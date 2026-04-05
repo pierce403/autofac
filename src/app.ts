@@ -11,9 +11,12 @@ import {
   setListingPrice,
 } from './game/sim';
 import { loadState, resetState, saveState } from './game/storage';
-import type { GameState, LogEntry } from './game/types';
+import type { GameState, LogEntry, MarketState, PricePoint } from './game/types';
 
 const AUTO_DAY_MS = 60_000;
+const CHART_WINDOWS = [7, 30, 365, 'all'] as const;
+
+type ChartWindow = (typeof CHART_WINDOWS)[number];
 
 const formatDate = (value: string): string =>
   new Intl.DateTimeFormat('en-US', {
@@ -27,6 +30,9 @@ const formatCountdown = (secondsRemaining: number): string => {
 
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
+
+const formatChartWindow = (value: ChartWindow): string =>
+  value === 'all' ? 'All' : `${value}D`;
 
 const logToneClass = (tone: LogEntry['tone']): string => {
   if (tone === 'trade') {
@@ -46,6 +52,96 @@ const logToneClass = (tone: LogEntry['tone']): string => {
 
 const rivalStyleLabel = (value: string): string => value.replace(/^\w/, (match) => match.toUpperCase());
 const formatPercent = (value: number): string => `${value >= 0 ? '+' : ''}${(value * 100).toFixed(1)}%`;
+
+const buildDailySeries = (
+  history: PricePoint[],
+  currentDay: number,
+  chartWindow: ChartWindow,
+): PricePoint[] => {
+  const normalizedHistory = history.length > 0 ? history : [{ day: currentDay, price: 0 }];
+  const startDay =
+    chartWindow === 'all'
+      ? Math.max(1, normalizedHistory[0]?.day ?? 1)
+      : Math.max(1, currentDay - chartWindow + 1);
+
+  const series: PricePoint[] = [];
+  let historyIndex = 0;
+  let activePrice = normalizedHistory[0]?.price ?? 0;
+
+  for (let day = startDay; day <= currentDay; day += 1) {
+    while (historyIndex < normalizedHistory.length && normalizedHistory[historyIndex].day <= day) {
+      activePrice = normalizedHistory[historyIndex].price;
+      historyIndex += 1;
+    }
+
+    series.push({ day, price: activePrice });
+  }
+
+  return series.length > 0 ? series : [{ day: currentDay, price: activePrice }];
+};
+
+const buildChartPath = (series: PricePoint[], width: number, height: number, padding: number) => {
+  const chartWidth = width - padding * 2;
+  const chartHeight = height - padding * 2;
+  const prices = series.map((point) => point.price);
+  const minPrice = Math.min(...prices);
+  const maxPrice = Math.max(...prices);
+  const priceSpan = Math.max(maxPrice - minPrice, 1);
+
+  const coordinates = series.map((point, index) => {
+    const x =
+      series.length === 1
+        ? width / 2
+        : padding + (index / (series.length - 1)) * chartWidth;
+    const normalized = (point.price - minPrice) / priceSpan;
+    const y = padding + (1 - normalized) * chartHeight;
+    return { x, y };
+  });
+
+  const linePath = coordinates
+    .map((coordinate, index) => `${index === 0 ? 'M' : 'L'} ${coordinate.x.toFixed(2)} ${coordinate.y.toFixed(2)}`)
+    .join(' ');
+
+  const areaPath = `${linePath} L ${coordinates.at(-1)?.x.toFixed(2) ?? width - padding} ${(height - padding).toFixed(2)} L ${coordinates[0]?.x.toFixed(2) ?? padding} ${(height - padding).toFixed(2)} Z`;
+
+  return {
+    areaPath,
+    linePath,
+    minPrice,
+    maxPrice,
+  };
+};
+
+const renderPriceChart = (
+  market: MarketState,
+  currentDay: number,
+  chartWindow: ChartWindow,
+): string => {
+  const series = buildDailySeries(market.priceHistory, currentDay, chartWindow);
+  const firstPrice = series[0]?.price ?? market.price;
+  const lastPrice = series.at(-1)?.price ?? market.price;
+  const changeRatio = firstPrice > 0 ? (lastPrice - firstPrice) / firstPrice : 0;
+  const trendClass =
+    changeRatio > 0.001 ? 'positive' : changeRatio < -0.001 ? 'negative' : 'neutral';
+  const { areaPath, linePath, minPrice, maxPrice } = buildChartPath(series, 240, 96, 10);
+
+  return `
+    <section class="price-chart-card">
+      <div class="price-chart-meta">
+        <span class="price-chart-range">${formatChartWindow(chartWindow)} view</span>
+        <span class="price-chart-change ${trendClass}">${formatPercent(changeRatio)}</span>
+      </div>
+      <svg class="price-chart" viewBox="0 0 240 96" preserveAspectRatio="none" aria-hidden="true">
+        <path class="price-chart-area" d="${areaPath}"></path>
+        <path class="price-chart-line ${trendClass}" d="${linePath}"></path>
+      </svg>
+      <div class="price-chart-footer">
+        <span>Low ${formatMoney(minPrice)}</span>
+        <span>High ${formatMoney(maxPrice)}</span>
+      </div>
+    </section>
+  `;
+};
 
 const renderRivalCard = (state: GameState, rivalId: string): string => {
   const rival = state.rivals.find((entry) => entry.id === rivalId);
@@ -78,7 +174,11 @@ const renderRivalCard = (state: GameState, rivalId: string): string => {
   `;
 };
 
-const renderProductCard = (state: GameState, productId: string): string => {
+const renderProductCard = (
+  state: GameState,
+  productId: string,
+  chartWindow: ChartWindow,
+): string => {
   const product = getProduct(productId);
   const market = state.markets[productId];
   const holding = state.holdings[productId];
@@ -139,7 +239,7 @@ const renderProductCard = (state: GameState, productId: string): string => {
           <dd>${holding.quantity > 0 ? formatMoney(listingPrice) : 'None'}</dd>
         </div>
       </dl>
-      <p class="price-history">Price trail: ${market.priceHistory.map((price) => formatMoney(price)).join(' → ')}</p>
+      ${renderPriceChart(market, state.day, chartWindow)}
 
       <p class="market-note">${market.note}</p>
 
@@ -167,7 +267,12 @@ const renderProductCard = (state: GameState, productId: string): string => {
   `;
 };
 
-const render = (state: GameState, flash: string, secondsRemaining: number): string => {
+const render = (
+  state: GameState,
+  flash: string,
+  secondsRemaining: number,
+  chartWindow: ChartWindow,
+): string => {
   const inventoryValue = getInventoryValue(state);
   const usedCapacity = getUsedCapacity(state);
   const netWorth = state.cash + inventoryValue;
@@ -190,23 +295,26 @@ const render = (state: GameState, flash: string, secondsRemaining: number): stri
           Buy fictional same-day goods before demand shifts. Sell into strength before your
           warehouse fills with dead weight.
         </p>
-        <section class="clock-card" aria-label="Market clock">
-          <div class="clock-copy">
-            <span class="clock-label">Next Market Day</span>
-            <strong>${formatCountdown(secondsRemaining)}</strong>
+        <section class="hero-control-strip" aria-label="Market clock and controls">
+          <div class="clock-donut-card">
+            <div
+              class="clock-donut"
+              style="--clock-progress: ${countdownProgress.toFixed(2)}%;"
+              aria-hidden="true"
+            >
+              <div class="clock-donut-inner"></div>
+            </div>
+            <div class="clock-stack">
+              <span class="clock-label">Next Market Day</span>
+              <strong class="clock-readout">${formatCountdown(secondsRemaining)}</strong>
+              <span class="clock-note">1 live minute = 1 day</span>
+            </div>
           </div>
-          <div class="clock-copy">
-            <span class="clock-label">Cadence</span>
-            <span class="clock-note">1 live minute = 1 day</span>
-          </div>
-          <div class="clock-bar" aria-hidden="true">
-            <span style="width: ${countdownProgress.toFixed(2)}%"></span>
+          <div class="hero-actions compact">
+            <button class="primary" data-action="advance-day">Advance Day</button>
+            <button class="secondary" data-action="reset-run">Reset Run</button>
           </div>
         </section>
-        <div class="hero-actions">
-          <button class="primary" data-action="advance-day">Advance Day</button>
-          <button class="secondary" data-action="reset-run">Reset Run</button>
-        </div>
         <p class="flash">${flash}</p>
       </section>
 
@@ -237,10 +345,27 @@ const render = (state: GameState, flash: string, secondsRemaining: number): stri
         <section class="panel market-panel">
           <div class="panel-header">
             <h2>Market Board</h2>
-            <span class="pill">Single Player</span>
+            <div class="panel-header-actions">
+              <span class="pill">Single Player</span>
+              <div class="chart-window-switcher" role="group" aria-label="Price chart range">
+                ${CHART_WINDOWS.map((windowValue) => {
+                  const isActive = chartWindow === windowValue;
+                  return `
+                    <button
+                      class="chart-window ${isActive ? 'active' : ''}"
+                      data-action="chart-window"
+                      data-window="${windowValue}"
+                      aria-pressed="${isActive ? 'true' : 'false'}"
+                    >
+                      ${formatChartWindow(windowValue)}
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+            </div>
           </div>
           <div class="product-grid">
-            ${PRODUCTS.map((product) => renderProductCard(state, product.id)).join('')}
+            ${PRODUCTS.map((product) => renderProductCard(state, product.id, chartWindow)).join('')}
           </div>
         </section>
 
@@ -284,9 +409,10 @@ export const mountApp = (root: HTMLDivElement): void => {
   let flash = state.logs[0]?.text ?? 'Warehouse board ready.';
   let timerAnchorMs = Date.now();
   let secondsRemaining = Math.ceil(AUTO_DAY_MS / 1000);
+  let chartWindow: ChartWindow = 30;
 
   const rerender = (): void => {
-    root.innerHTML = render(state, flash, secondsRemaining);
+    root.innerHTML = render(state, flash, secondsRemaining, chartWindow);
   };
 
   const refreshCountdown = (now: number): void => {
@@ -342,6 +468,17 @@ export const mountApp = (root: HTMLDivElement): void => {
     }
 
     const action = button.dataset.action;
+
+    if (action === 'chart-window') {
+      const nextWindow = button.dataset.window;
+
+      if (nextWindow === 'all' || nextWindow === '7' || nextWindow === '30' || nextWindow === '365') {
+        chartWindow = nextWindow === 'all' ? 'all' : Number(nextWindow) as Exclude<ChartWindow, 'all'>;
+        rerender();
+      }
+
+      return;
+    }
 
     if (action === 'advance-day') {
       applyDayAdvance(1, 'manual');

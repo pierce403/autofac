@@ -28,10 +28,15 @@ export interface HoldingState {
   listingPrice: number | null;
 }
 
+export interface PricePoint {
+  day: number;
+  price: number;
+}
+
 export interface MarketState {
   productId: string;
   price: number;
-  priceHistory: number[];
+  priceHistory: PricePoint[];
   supply: number;
   demandIndex: number;
   seasonFactor: number;
