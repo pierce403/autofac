@@ -52,3 +52,4 @@
 - [x] **[SIM-1]** Build a demand model with baseline demand, seasonal modifiers, price elasticity, and short-lived demand spikes - 2026-04-05
 - [x] **[CONTENT-2]** Add local news bulletins that create temporary demand and supply shocks across the district board - 2026-04-05
 - [x] **[CONTENT-3]** Refocus the opening catalog on repeat-purchase shelf-stable foods and toiletries - 2026-04-05
+- [x] **[UX-8]** Fix collapsed market-row layout on phones so the asset toggle icon stays aligned without wrapping - 2026-04-05
