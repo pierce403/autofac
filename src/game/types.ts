@@ -37,6 +37,8 @@ export interface MarketState {
   productId: string;
   price: number;
   priceHistory: PricePoint[];
+  demandShock: number;
+  supplyShock: number;
   supply: number;
   demandIndex: number;
   seasonFactor: number;

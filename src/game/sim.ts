@@ -22,6 +22,9 @@ const roundMoney = (value: number): number => Math.round(value * 100) / 100;
 const randomBetween = (min: number, max: number): number =>
   min + Math.random() * (max - min);
 
+const maybeShock = (chance: number, min: number, max: number): number =>
+  Math.random() < chance ? randomBetween(min, max) : 0;
+
 const parseDate = (value: string): Date => new Date(`${value}T12:00:00`);
 
 const toDateString = (date: Date): string => date.toISOString().slice(0, 10);
@@ -109,6 +112,8 @@ const createMarkets = (): Record<string, MarketState> =>
         productId: product.id,
         price: product.basePrice,
         priceHistory: [{ day: 1, price: product.basePrice }],
+        demandShock: 0,
+        supplyShock: 0,
         supply: product.baseSupply,
         demandIndex: product.baseDemand,
         seasonFactor: getSeasonFactor(product, START_DATE),
@@ -120,7 +125,7 @@ const createMarkets = (): Record<string, MarketState> =>
   );
 
 export const createInitialState = (): GameState => ({
-  version: 4,
+  version: 5,
   day: 1,
   currentDate: START_DATE,
   cash: 1000,
@@ -503,23 +508,74 @@ export const advanceDay = (state: GameState): SimulationResult => {
   for (const product of PRODUCTS) {
     const market = next.markets[product.id];
     const seasonFactor = getSeasonFactor(product, next.currentDate);
-    const pulse = randomBetween(1 - product.volatility, 1 + product.volatility);
-    const demandIndex = clamp(product.baseDemand * seasonFactor * pulse, 0.68, 1.8);
-    const buyerPull = Math.round(product.baseSupply * 0.065 * demandIndex + randomBetween(0, 4));
-    const restock = Math.round(product.baseSupply * 0.05 + randomBetween(0, 5));
+    const pricePremium = market.price / product.basePrice - 1;
+    const demandShock = clamp(
+      market.demandShock * 0.76 +
+        randomBetween(-product.volatility, product.volatility) * 0.35 +
+        maybeShock(0.08, -0.16, 0.22),
+      -0.45,
+      0.55,
+    );
+    const supplyShock = clamp(
+      market.supplyShock * 0.7 +
+        randomBetween(-0.05, 0.05) +
+        maybeShock(0.06, -0.18, 0.24),
+      -0.28,
+      0.36,
+    );
+    const demandBase = product.baseDemand * seasonFactor;
+    const priceDrag = clamp(
+      1 - Math.max(-0.2, pricePremium * (0.78 + product.priceElasticity * 1.6)),
+      0.62,
+      1.28,
+    );
+    const demandIndex = clamp(demandBase * (1 + demandShock) * priceDrag, 0.58, 1.95);
+    const shortageRatio = clamp((product.baseSupply - market.supply) / product.baseSupply, -0.45, 1.15);
+    const buyerPull = Math.max(
+      0,
+      Math.round(
+        product.baseSupply *
+          (0.034 + demandIndex * 0.041) *
+          (1 + randomBetween(-0.22, 0.22)),
+      ),
+    );
+    const restockMultiplier = clamp(
+      1 - supplyShock + Math.max(0, shortageRatio) * 0.55 + Math.max(0, pricePremium) * 0.32,
+      0.4,
+      1.95,
+    );
+    const restock = Math.max(
+      0,
+      Math.round(
+        product.baseSupply * 0.042 * restockMultiplier +
+          randomBetween(0, product.baseSupply * 0.025 + 2),
+      ),
+    );
     const supply = clamp(market.supply + restock - buyerPull, 0, product.baseSupply * 2);
     const scarcity = clamp((product.baseSupply - supply) / product.baseSupply, -0.35, 0.9);
-    const drift = randomBetween(-product.volatility / 4, product.volatility / 4);
-    const priceDelta =
-      (demandIndex - 1) * product.priceElasticity + scarcity * 0.11 + drift;
+    const fairValue = product.basePrice * clamp(
+      1 +
+        (demandIndex - 1) * 0.72 +
+        scarcity * 0.44 +
+        supplyShock * 0.24,
+      0.62,
+      2.35,
+    );
+    const dailyNoise = product.basePrice * randomBetween(-product.volatility, product.volatility) * 0.18;
     const price = roundMoney(
-      clamp(market.price * (1 + priceDelta), product.basePrice * 0.68, product.basePrice * 1.9),
+      clamp(
+        market.price + (fairValue - market.price) * 0.34 + dailyNoise,
+        product.basePrice * 0.58,
+        product.basePrice * 2.4,
+      ),
     );
 
     next.markets[product.id] = {
       ...market,
       price,
       priceHistory: appendPriceHistory(market.priceHistory, next.day, price),
+      demandShock: roundMoney(demandShock),
+      supplyShock: roundMoney(supplyShock),
       supply,
       demandIndex: roundMoney(demandIndex),
       seasonFactor: roundMoney(seasonFactor),

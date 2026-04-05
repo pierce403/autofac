@@ -85,7 +85,7 @@ npm run build
 ## Current Architecture Notes
 
 - The first playable loop lives in plain TypeScript modules under `src/game/`; keep simulation logic there and keep `src/app.ts` focused on rendering and input wiring.
-- Local persistence uses `localStorage` key `autofac-save-v4`. If the save schema changes, version it deliberately instead of trying to infer migrations ad hoc.
+- Local persistence uses `localStorage` key `autofac-save-v5`. If the save schema changes, version it deliberately instead of trying to infer migrations ad hoc.
 - Day advancement currently moves each product by season factor, volatility pulse, buyer pull, and restock. Manual trades also nudge spot price, so trade impact is already part of the economy model.
 - The in-session market clock is managed in `src/app.ts` with a one-minute anchor timestamp, a one-second UI tick, and catch-up advancement when the browser delays execution. Manual day advancement resets the clock back to a full minute.
 - Rival desks now live in the same daily simulation pass as the market update. They should continue to trade against the same supply pool rather than a separate hidden market.
@@ -96,6 +96,8 @@ npm run build
 - Market cards now render an actual SVG price chart, and the market board owns a global 7/30/365/All range switcher. Treat chart range as transient UI state in `src/app.ts`, not saved game state.
 - The hero clock is now a compact donut/two-button control cluster. Keep timer copy terse and keep the manual day/reset actions visually attached to that cluster.
 - The market board itself is now a single-column accordion asset list. Row expansion state is transient UI state in `src/app.ts`; collapsed rows must always surface current price, held quantity, and live P/L before the user opens the detailed trading view.
+- The pre-2026-04-05 market loop had a structural shortage ratchet: buyer pull drifted above restock for most products, supply shortages never triggered stronger replenishment, and price elasticity only affected price updates, not demand. That combination pushed several items into the hard cap and left them there.
+- The current market loop now carries persistent `demandShock` and `supplyShock` state per product, applies price-sensitive demand drag, and increases restock pressure when shortages or high prices persist. Temporary shocks still decay, so prices can run and then unwind instead of pinning.
 
 ## Rapport Notes
 

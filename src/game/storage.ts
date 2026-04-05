@@ -1,8 +1,8 @@
 import { createInitialState } from './sim';
 import type { GameState, PricePoint } from './types';
 
-const STORAGE_KEY = 'autofac-save-v4';
-const LEGACY_STORAGE_KEYS = ['autofac-save-v3'] as const;
+const STORAGE_KEY = 'autofac-save-v5';
+const LEGACY_STORAGE_KEYS = ['autofac-save-v4', 'autofac-save-v3'] as const;
 
 interface LegacyMarketStateV3 {
   productId: string;
@@ -19,6 +19,23 @@ interface LegacyMarketStateV3 {
 interface LegacyGameStateV3 extends Omit<GameState, 'version' | 'markets'> {
   version: 3;
   markets: Record<string, LegacyMarketStateV3>;
+}
+
+interface LegacyMarketStateV4 {
+  productId: string;
+  price: number;
+  priceHistory: PricePoint[];
+  supply: number;
+  demandIndex: number;
+  seasonFactor: number;
+  demandLabel: string;
+  seasonLabel: string;
+  note: string;
+}
+
+interface LegacyGameStateV4 extends Omit<GameState, 'version' | 'markets'> {
+  version: 4;
+  markets: Record<string, LegacyMarketStateV4>;
 }
 
 const migratePriceHistory = (
@@ -43,13 +60,30 @@ const migratePriceHistory = (
 
 const migrateV3State = (state: LegacyGameStateV3): GameState => ({
   ...state,
-  version: 4,
+  version: 5,
   markets: Object.fromEntries(
     Object.entries(state.markets).map(([productId, market]) => [
       productId,
       {
         ...market,
         priceHistory: migratePriceHistory(market.priceHistory, state.day, market.price),
+        demandShock: 0,
+        supplyShock: 0,
+      },
+    ]),
+  ),
+});
+
+const migrateV4State = (state: LegacyGameStateV4): GameState => ({
+  ...state,
+  version: 5,
+  markets: Object.fromEntries(
+    Object.entries(state.markets).map(([productId, market]) => [
+      productId,
+      {
+        ...market,
+        demandShock: 0,
+        supplyShock: 0,
       },
     ]),
   ),
@@ -65,8 +99,19 @@ export const loadState = (): GameState => {
     try {
       const parsed = JSON.parse(raw) as GameState | LegacyGameStateV3;
 
-      if (parsed.version === 4) {
+      if (parsed.version === 5) {
         return parsed as GameState;
+      }
+
+      if (parsed.version === 4) {
+        const migrated = migrateV4State(parsed as LegacyGameStateV4);
+        saveState(migrated);
+
+        for (const legacyKey of LEGACY_STORAGE_KEYS) {
+          window.localStorage.removeItem(legacyKey);
+        }
+
+        return migrated;
       }
 
       if (parsed.version === 3) {
