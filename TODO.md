@@ -53,3 +53,4 @@
 - [x] **[CONTENT-2]** Add local news bulletins that create temporary demand and supply shocks across the district board - 2026-04-05
 - [x] **[CONTENT-3]** Refocus the opening catalog on repeat-purchase shelf-stable foods and toiletries - 2026-04-05
 - [x] **[UX-8]** Fix collapsed market-row layout on phones so the asset toggle icon stays aligned without wrapping - 2026-04-05
+- [x] **[TECH-4]** Add Playwright responsive smoke tests for mobile, tablet, and desktop layouts - 2026-04-05

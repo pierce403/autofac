@@ -74,6 +74,7 @@ Verified again on 2026-04-05:
 ```bash
 npm run check
 npm run build
+npm run test:e2e
 ```
 
 ## Known Pitfalls
@@ -99,6 +100,7 @@ npm run build
 - The hero clock is now a compact donut/two-button control cluster. Keep timer copy terse and keep the manual day/reset actions visually attached to that cluster.
 - The market board itself is now a single-column accordion asset list. Row expansion state is transient UI state in `src/app.ts`; collapsed rows must always surface current price, held quantity, and live P/L before the user opens the detailed trading view.
 - On narrow screens, collapsed market rows use a two-line grid: product info and toggle icon on the first row, summary stats underneath. Keep the plus/minus icon in its own grid area so it cannot wrap and make cards overflow on phones.
+- Responsive UI coverage now lives in `tests/responsive-layout.spec.ts` with snapshots under `tests/responsive-layout.spec.ts-snapshots/`. The suite freezes `Date.now()`, runs mobile/tablet/desktop projects in Chromium, and checks both overflow and screenshot layout regressions.
 - The pre-2026-04-05 market loop had a structural shortage ratchet: buyer pull drifted above restock for most products, supply shortages never triggered stronger replenishment, and price elasticity only affected price updates, not demand. That combination pushed several items into the hard cap and left them there.
 - The current market loop now carries persistent `demandShock` and `supplyShock` state per product, applies price-sensitive demand drag, and increases restock pressure when shortages or high prices persist. Temporary shocks still decay, so prices can run and then unwind instead of pinning.
 - The news/event layer is intentionally local, not macro/global. `src/game/content.ts` defines district-scale bulletins, `src/game/sim.ts` resolves them into temporary per-product demand/supply shifts, and `src/app.ts` renders them in the `Local Wire` panel. Keep event copy focused on neighborhood logistics, weather, local routes, utilities, and community demand pulses.
