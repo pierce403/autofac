@@ -494,16 +494,6 @@ const render = (
         </section>
 
         <aside class="side-column">
-          <section class="panel">
-            <div class="panel-header">
-              <h2>Rival Desks</h2>
-              <span class="pill subtle">${state.rivals.length} active</span>
-            </div>
-            <div class="product-grid rival-grid">
-              ${state.rivals.map((rival) => renderRivalCard(state, rival.id)).join('')}
-            </div>
-          </section>
-
           <section class="panel news-panel">
             <div class="panel-header">
               <h2>Local Wire</h2>
@@ -523,6 +513,16 @@ const render = (
                   </ul>
                 `
             }
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h2>Rival Desks</h2>
+              <span class="pill subtle">${state.rivals.length} active</span>
+            </div>
+            <div class="product-grid rival-grid">
+              ${state.rivals.map((rival) => renderRivalCard(state, rival.id)).join('')}
+            </div>
           </section>
 
           <section class="panel notes-panel">
