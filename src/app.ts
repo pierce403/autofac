@@ -390,7 +390,7 @@ const render = (
         <div class="hero-header">
           <div>
             <p class="eyebrow">Warehouse Speculation Sim</p>
-            <h1>Autofac</h1>
+            <h1>AUTOFAC</h1>
           </div>
           <div class="hero-date">
             <span>Day ${state.day}</span>

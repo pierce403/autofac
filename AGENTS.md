@@ -17,7 +17,7 @@ Keep entries concrete. Prefer exact commands, paths, and examples over general a
 
 ## Project Overview
 
-**Autofac** is a mobile-first, local-only warehouse speculation game built as a static web app. The player buys and sells inventory in a fictional local essentials market while simulated buyers and rival speculators compete for profit.
+**AUTOFAC** is a mobile-first, local-only warehouse speculation game built as a static web app. The player buys and sells inventory in a fictional local essentials market while simulated buyers and rival speculators compete for profit.
 
 ### Product Rules
 - Use fictional warehouse and product names only.
@@ -103,6 +103,7 @@ npm run build
 - `GameState.newsFeed` now stores persisted bulletins with `startedDay`, `expiresDay`, and explicit `effects`; `src/game/storage.ts` clears stale bulletins while translating older catalogs onto the current staple-focused board.
 - The opening catalog now centers on repeat-purchase staples: flour, oats, rice, soap, toothpaste, and tissue. When adding products or events, prefer goods households rebuy regularly and keep local-wire bulletins tied to pantry refills, school routines, hygiene pushes, and bulk-delivery disruptions.
 - The shift from mixed goods to staple consumables required a catalog migration in `src/game/storage.ts`; `v6` saves are translated onto the refreshed board and old news/log entries are cleared so legacy prices do not carry gadget-era assumptions into the staple economy.
+- The brand mark is uppercase `AUTOFAC` in the app header and the HTML document title. Keep user-facing top-level branding in all caps unless the collaborator changes that direction.
 
 ## Rapport Notes
 
