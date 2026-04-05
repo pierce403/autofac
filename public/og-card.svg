@@ -1,0 +1,122 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="132" y1="52" x2="1040" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F4EDE3"/>
+      <stop offset="1" stop-color="#D9CCB8"/>
+    </linearGradient>
+    <radialGradient id="glowTop" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(180 84) rotate(38) scale(340 260)">
+      <stop stop-color="white" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="white" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowBottom" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1050 598) rotate(-28) scale(380 260)">
+      <stop stop-color="#A54A1F" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#A54A1F" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="panel" x1="688" y1="74" x2="1088" y2="554" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF8F0" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#F2E7D7" stop-opacity="0.92"/>
+    </linearGradient>
+    <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#A54A1F" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#A54A1F" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="615" y="36" width="537" height="560" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dx="0" dy="18"/>
+      <feGaussianBlur stdDeviation="18"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.305882 0 0 0 0 0.215686 0 0 0 0 0.121569 0 0 0 0.17 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_1"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_1" result="shape"/>
+    </filter>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0V48" stroke="#3A2C1E" stroke-opacity="0.05"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="630" rx="0" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <rect width="1200" height="630" fill="url(#glowTop)"/>
+  <rect width="1200" height="630" fill="url(#glowBottom)"/>
+  <circle cx="1032" cy="122" r="142" fill="#A54A1F" fill-opacity="0.08"/>
+  <circle cx="948" cy="180" r="44" fill="#256142" fill-opacity="0.12"/>
+  <circle cx="1128" cy="222" r="22" fill="#BC5E29" fill-opacity="0.18"/>
+
+  <text x="92" y="118" fill="#A54A1F" font-family="Avenir Next, Segoe UI, sans-serif" font-size="22" font-weight="700" letter-spacing="4.5">LOCAL SUPPLY CHAIN SPECULATION</text>
+  <text x="92" y="226" fill="#1D1A16" font-family="Avenir Next, Segoe UI, sans-serif" font-size="118" font-weight="800" letter-spacing="-4">AUTOFAC</text>
+  <text x="92" y="286" fill="#732D10" font-family="Avenir Next, Segoe UI, sans-serif" font-size="29" font-weight="700">
+    <tspan x="92" dy="0">Trade staple foods and toiletries</tspan>
+    <tspan x="92" dy="34">into local demand shifts.</tspan>
+  </text>
+  <text x="92" y="342" fill="#645B4F" font-family="Avenir Next, Segoe UI, sans-serif" font-size="27">
+    <tspan x="92" dy="0">Buy flour, oats, rice, soap, toothpaste,</tspan>
+    <tspan x="92" dy="38">and tissue before the board tightens.</tspan>
+  </text>
+
+  <g>
+    <rect x="92" y="414" width="166" height="46" rx="23" fill="#EAD8BE"/>
+    <text x="122" y="444" fill="#732D10" font-family="Avenir Next, Segoe UI, sans-serif" font-size="20" font-weight="700">LOCAL WIRE</text>
+    <rect x="274" y="414" width="122" height="46" rx="23" fill="#FFF8EE" fill-opacity="0.92" stroke="#3A2C1E" stroke-opacity="0.08"/>
+    <text x="308" y="444" fill="#645B4F" font-family="Avenir Next, Segoe UI, sans-serif" font-size="20" font-weight="700">RIVALS</text>
+    <rect x="412" y="414" width="162" height="46" rx="23" fill="#FFF8EE" fill-opacity="0.92" stroke="#3A2C1E" stroke-opacity="0.08"/>
+    <text x="443" y="444" fill="#645B4F" font-family="Avenir Next, Segoe UI, sans-serif" font-size="20" font-weight="700">DAY BY DAY</text>
+  </g>
+
+  <g>
+    <rect x="92" y="496" width="440" height="78" rx="28" fill="#FFF8F0" fill-opacity="0.84" stroke="#3A2C1E" stroke-opacity="0.08"/>
+    <text x="124" y="528" fill="#645B4F" font-family="Avenir Next, Segoe UI, sans-serif" font-size="18" font-weight="700" letter-spacing="2.5">THIS WEEK ON THE BOARD</text>
+    <text x="124" y="559" fill="#1D1A16" font-family="Avenir Next, Segoe UI, sans-serif" font-size="24" font-weight="700">Bakery contracts lift flour. Tissue tightens.</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="651" y="70" width="471" height="492" rx="34" fill="url(#panel)" stroke="#3A2C1E" stroke-opacity="0.12"/>
+
+    <text x="687" y="115" fill="#645B4F" font-family="Avenir Next, Segoe UI, sans-serif" font-size="18" font-weight="700" letter-spacing="2.8">DISTRICT BOARD</text>
+    <text x="687" y="150" fill="#1D1A16" font-family="Avenir Next, Segoe UI, sans-serif" font-size="33" font-weight="800">Staples Snapshot</text>
+
+    <g>
+      <rect x="990" y="96" width="92" height="92" rx="46" fill="#FFF8F0" stroke="#3A2C1E" stroke-opacity="0.08"/>
+      <circle cx="1036" cy="142" r="28" fill="none" stroke="#7C5B34" stroke-opacity="0.14" stroke-width="10"/>
+      <path d="M1036 114 A28 28 0 1 1 1009 150" stroke="#A54A1F" stroke-width="10" stroke-linecap="round" fill="none"/>
+      <text x="1016" y="148" fill="#732D10" font-family="Avenir Next, Segoe UI, sans-serif" font-size="20" font-weight="800">43s</text>
+    </g>
+
+    <g>
+      <rect x="687" y="188" width="188" height="102" rx="24" fill="#FFF9F1" stroke="#3A2C1E" stroke-opacity="0.08"/>
+      <text x="711" y="218" fill="#645B4F" font-family="Avenir Next, Segoe UI, sans-serif" font-size="15" font-weight="700" letter-spacing="1.8">BAKING STAPLES</text>
+      <text x="711" y="252" fill="#1D1A16" font-family="Avenir Next, Segoe UI, sans-serif" font-size="26" font-weight="800">Northmill Flour</text>
+      <text x="711" y="282" fill="#256142" font-family="Avenir Next, Segoe UI, sans-serif" font-size="22" font-weight="800">$14  +18.4%</text>
+    </g>
+
+    <g>
+      <rect x="888" y="188" width="198" height="102" rx="24" fill="#FFF9F1" stroke="#3A2C1E" stroke-opacity="0.08"/>
+      <text x="912" y="218" fill="#645B4F" font-family="Avenir Next, Segoe UI, sans-serif" font-size="15" font-weight="700" letter-spacing="1.8">PAPER GOODS</text>
+      <text x="912" y="252" fill="#1D1A16" font-family="Avenir Next, Segoe UI, sans-serif" font-size="26" font-weight="800">Softloop Tissue</text>
+      <text x="912" y="282" fill="#BC5E29" font-family="Avenir Next, Segoe UI, sans-serif" font-size="22" font-weight="800">$16  supply tight</text>
+    </g>
+
+    <g>
+      <rect x="687" y="308" width="399" height="222" rx="28" fill="#FFF8F0" stroke="#3A2C1E" stroke-opacity="0.08"/>
+      <text x="715" y="344" fill="#645B4F" font-family="Avenir Next, Segoe UI, sans-serif" font-size="15" font-weight="700" letter-spacing="1.8">30 DAY TREND</text>
+      <text x="715" y="381" fill="#1D1A16" font-family="Avenir Next, Segoe UI, sans-serif" font-size="28" font-weight="800">Local staples repricing upward</text>
+
+      <g opacity="0.5">
+        <path d="M716 450H1054" stroke="#3A2C1E" stroke-opacity="0.12"/>
+        <path d="M716 414H1054" stroke="#3A2C1E" stroke-opacity="0.08"/>
+        <path d="M716 486H1054" stroke="#3A2C1E" stroke-opacity="0.08"/>
+      </g>
+
+      <path d="M716 491L770 478L825 460L878 430L932 390L988 356L1054 322L1054 500L716 500Z" fill="url(#chartFill)"/>
+      <path d="M716 491L770 478L825 460L878 430L932 390L988 356L1054 322" stroke="#256142" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+      <g>
+        <rect x="726" y="398" width="108" height="34" rx="17" fill="#EAD8BE"/>
+        <text x="751" y="421" fill="#732D10" font-family="Avenir Next, Segoe UI, sans-serif" font-size="16" font-weight="700">LOCAL WIRE</text>
+        <rect x="844" y="398" width="112" height="34" rx="17" fill="#FFF8EE" stroke="#3A2C1E" stroke-opacity="0.08"/>
+        <text x="869" y="421" fill="#645B4F" font-family="Avenir Next, Segoe UI, sans-serif" font-size="16" font-weight="700">RIVALS 3</text>
+      </g>
+
+      <text x="715" y="464" fill="#645B4F" font-family="Avenir Next, Segoe UI, sans-serif" font-size="19">Flour demand, breakfast refills, tissue friction</text>
+    </g>
+  </g>
+</svg>

@@ -91,6 +91,7 @@ npm run build
 - The in-session market clock is managed in `src/app.ts` with a one-minute anchor timestamp, a one-second UI tick, and catch-up advancement when the browser delays execution. Manual day advancement resets the clock back to a full minute.
 - Rival desks now live in the same daily simulation pass as the market update. They should continue to trade against the same supply pool rather than a separate hidden market.
 - Custom-domain deployment artifact is supplied by `public/CNAME`, which Vite copies into `dist/` during `npm run build`.
+- Social preview metadata lives in `index.html`, and the share card assets live at `public/og-card.svg` and `public/og-card.png`. Keep OG/Twitter tags on absolute `https://autofac.io/...` URLs so link scrapers resolve them correctly.
 - The desktop layout now relies on `dashboard-layout` and `side-column` in `src/app.ts`/`src/styles.css`: market board on the left, rivals and notes on a sticky right rail, while mobile still collapses back to one column.
 - Holdings now track an optional per-product `listingPrice` in `src/game/types.ts`. Buying inventory auto-seeds the listing at +10% of the fill price, and `runAutoListings` in `src/game/sim.ts` liquidates holdings when spot price meets or beats that listing.
 - `MarketState.priceHistory` now stores day-stamped price points rather than bare numbers. `src/game/storage.ts` migrates old `v3` saves into the new structure on load.
