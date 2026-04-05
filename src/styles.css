@@ -388,6 +388,20 @@ body::before {
   font-weight: 700;
 }
 
+.gain-positive {
+  color: var(--positive);
+}
+
+.gain-negative {
+  color: var(--warm);
+}
+
+.price-history {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
 .market-note {
   font-size: 0.92rem;
 }

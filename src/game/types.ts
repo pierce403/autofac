@@ -25,11 +25,13 @@ export interface RivalDefinition {
 export interface HoldingState {
   quantity: number;
   averageCost: number;
+  listingPrice: number | null;
 }
 
 export interface MarketState {
   productId: string;
   price: number;
+  priceHistory: number[];
   supply: number;
   demandIndex: number;
   seasonFactor: number;

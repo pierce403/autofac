@@ -6,7 +6,9 @@ import {
   getInventoryValue,
   getProduct,
   getUsedCapacity,
+  runAutoListings,
   sellUnits,
+  setListingPrice,
 } from './game/sim';
 import { loadState, resetState, saveState } from './game/storage';
 import type { GameState, LogEntry } from './game/types';
@@ -43,6 +45,7 @@ const logToneClass = (tone: LogEntry['tone']): string => {
 };
 
 const rivalStyleLabel = (value: string): string => value.replace(/^\w/, (match) => match.toUpperCase());
+const formatPercent = (value: number): string => `${value >= 0 ? '+' : ''}${(value * 100).toFixed(1)}%`;
 
 const renderRivalCard = (state: GameState, rivalId: string): string => {
   const rival = state.rivals.find((entry) => entry.id === rivalId);
@@ -81,6 +84,13 @@ const renderProductCard = (state: GameState, productId: string): string => {
   const holding = state.holdings[productId];
   const canBuy = state.cash >= market.price && market.supply > 0;
   const canSell = holding.quantity > 0;
+  const holdingGain =
+    holding.quantity > 0 ? (market.price - holding.averageCost) * holding.quantity : 0;
+  const holdingReturn =
+    holding.quantity > 0 && holding.averageCost > 0
+      ? (market.price - holding.averageCost) / holding.averageCost
+      : 0;
+  const listingPrice = holding.listingPrice ?? market.price * 1.1;
 
   return `
     <article class="product-card">
@@ -116,7 +126,20 @@ const renderProductCard = (state: GameState, productId: string): string => {
           <dt>Avg Cost</dt>
           <dd>${holding.quantity > 0 ? formatMoney(holding.averageCost) : 'None'}</dd>
         </div>
+        <div>
+          <dt>Gain/Loss</dt>
+          <dd class="${holdingGain >= 0 ? 'gain-positive' : 'gain-negative'}">${
+            holding.quantity > 0
+              ? `${formatMoney(holdingGain)} (${formatPercent(holdingReturn)})`
+              : 'None'
+          }</dd>
+        </div>
+        <div>
+          <dt>Listing</dt>
+          <dd>${holding.quantity > 0 ? formatMoney(listingPrice) : 'None'}</dd>
+        </div>
       </dl>
+      <p class="price-history">Price trail: ${market.priceHistory.map((price) => formatMoney(price)).join(' → ')}</p>
 
       <p class="market-note">${market.note}</p>
 
@@ -133,6 +156,12 @@ const renderProductCard = (state: GameState, productId: string): string => {
         <button data-action="sell" data-product-id="${product.id}" data-quantity="5" ${
           canSell ? '' : 'disabled'
         }>Sell 5</button>
+        <button data-action="listing-bump" data-product-id="${product.id}" data-direction="-1" ${
+          canSell ? '' : 'disabled'
+        }>Listing -5%</button>
+        <button data-action="listing-bump" data-product-id="${product.id}" data-direction="1" ${
+          canSell ? '' : 'disabled'
+        }>Listing +5%</button>
       </div>
     </article>
   `;
@@ -275,6 +304,12 @@ export const mountApp = (root: HTMLDivElement): void => {
       resultMessages.push(result.message);
     }
 
+    const listingResult = runAutoListings(state);
+    state = listingResult.state;
+    if (listingResult.ok) {
+      resultMessages.push(listingResult.message);
+    }
+
     const finalMessage = resultMessages.at(-1) ?? 'Another market day rolled over.';
     flash =
       source === 'auto' && dayCount > 1
@@ -331,6 +366,35 @@ export const mountApp = (root: HTMLDivElement): void => {
       return;
     }
 
+    if (action === 'listing-bump') {
+      const productId = button.dataset.productId;
+      const direction = Number(button.dataset.direction ?? '0');
+
+      if (!productId || Math.abs(direction) !== 1) {
+        return;
+      }
+
+      const holding = state.holdings[productId];
+      const market = state.markets[productId];
+      const baseListing = holding.listingPrice ?? market.price * 1.1;
+      const nextListing = baseListing * (1 + direction * 0.05);
+      const result = setListingPrice(state, productId, nextListing);
+      state = result.state;
+      flash = result.message;
+
+      if (result.ok) {
+        const listingResult = runAutoListings(state);
+        state = listingResult.state;
+        if (listingResult.ok) {
+          flash = `${flash} ${listingResult.message}`;
+        }
+        saveState(state);
+      }
+
+      rerender();
+      return;
+    }
+
     const productId = button.dataset.productId;
     const quantity = Number(button.dataset.quantity ?? '0');
 
@@ -345,6 +409,11 @@ export const mountApp = (root: HTMLDivElement): void => {
     flash = result.message;
 
     if (result.ok) {
+      const listingResult = runAutoListings(state);
+      state = listingResult.state;
+      if (listingResult.ok) {
+        flash = `${flash} ${listingResult.message}`;
+      }
       saveState(state);
     }
 
