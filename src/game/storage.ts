@@ -1,7 +1,7 @@
 import { createInitialState } from './sim';
 import type { GameState } from './types';
 
-const STORAGE_KEY = 'autofac-save-v2';
+const STORAGE_KEY = 'autofac-save-v3';
 
 export const loadState = (): GameState => {
   try {
@@ -12,7 +12,7 @@ export const loadState = (): GameState => {
 
     const parsed = JSON.parse(raw) as GameState;
 
-    if (parsed.version !== 2) {
+    if (parsed.version !== 3) {
       return createInitialState();
     }
 

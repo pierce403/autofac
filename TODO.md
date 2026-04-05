@@ -48,3 +48,4 @@
 - [x] **[DEPLOY-1]** Add GitHub Pages deployment notes and base-path handling - 2026-04-04
 - [x] **[TIME-1]** Add a live market clock so each 60 seconds on-site advances one day - 2026-04-04
 - [x] **[UX-5]** Make the market layout read cleanly on desktop without compromising the mobile-first flow - 2026-04-04
+- [x] **[GAME-3]** Add listing automation, gain/loss visibility, and per-product price trails for held inventory - 2026-04-05

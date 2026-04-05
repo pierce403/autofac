@@ -68,6 +68,13 @@ gh run watch --repo pierce403/autofac "$(gh run list --repo pierce403/autofac --
 curl -I https://autofac.io
 ```
 
+Verified again on 2026-04-05:
+
+```bash
+npm run check
+npm run build
+```
+
 ## Known Pitfalls
 
 - Before `npm install`, `npm run check` may resolve to an older system `tsc` and report options as invalid. Install project dependencies first, then rerun the npm scripts.
@@ -78,12 +85,14 @@ curl -I https://autofac.io
 ## Current Architecture Notes
 
 - The first playable loop lives in plain TypeScript modules under `src/game/`; keep simulation logic there and keep `src/app.ts` focused on rendering and input wiring.
-- Local persistence uses `localStorage` key `autofac-save-v2`. If the save schema changes, version it deliberately instead of trying to infer migrations ad hoc.
+- Local persistence uses `localStorage` key `autofac-save-v3`. If the save schema changes, version it deliberately instead of trying to infer migrations ad hoc.
 - Day advancement currently moves each product by season factor, volatility pulse, buyer pull, and restock. Manual trades also nudge spot price, so trade impact is already part of the economy model.
 - The in-session market clock is managed in `src/app.ts` with a one-minute anchor timestamp, a one-second UI tick, and catch-up advancement when the browser delays execution. Manual day advancement resets the clock back to a full minute.
 - Rival desks now live in the same daily simulation pass as the market update. They should continue to trade against the same supply pool rather than a separate hidden market.
 - Custom-domain deployment artifact is supplied by `public/CNAME`, which Vite copies into `dist/` during `npm run build`.
 - The desktop layout now relies on `dashboard-layout` and `side-column` in `src/app.ts`/`src/styles.css`: market board on the left, rivals and notes on a sticky right rail, while mobile still collapses back to one column.
+- Holdings now track an optional per-product `listingPrice` in `src/game/types.ts`. Buying inventory auto-seeds the listing at +10% of the fill price, and `runAutoListings` in `src/game/sim.ts` liquidates holdings when spot price meets or beats that listing.
+- Market cards now expose a short `priceHistory` trail sourced from `MarketState.priceHistory`; keep chart/history additions compatible with this rolling list.
 
 ## Rapport Notes
 

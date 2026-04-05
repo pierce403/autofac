@@ -12,6 +12,7 @@ import type {
 
 const START_DATE = '2026-03-15';
 const MAX_LOGS = 14;
+const MAX_PRICE_HISTORY = 16;
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value));
@@ -84,6 +85,7 @@ const createHoldings = (): Record<string, HoldingState> =>
       {
         quantity: 0,
         averageCost: 0,
+        listingPrice: null,
       },
     ]),
   );
@@ -106,6 +108,7 @@ const createMarkets = (): Record<string, MarketState> =>
       {
         productId: product.id,
         price: product.basePrice,
+        priceHistory: [product.basePrice],
         supply: product.baseSupply,
         demandIndex: product.baseDemand,
         seasonFactor: getSeasonFactor(product, START_DATE),
@@ -117,10 +120,10 @@ const createMarkets = (): Record<string, MarketState> =>
   );
 
 export const createInitialState = (): GameState => ({
-  version: 2,
+  version: 3,
   day: 1,
   currentDate: START_DATE,
-  cash: 25000,
+  cash: 1000,
   realizedProfit: 0,
   warehouseCapacity: 24,
   holdings: createHoldings(),
@@ -176,6 +179,7 @@ const updateHoldingAfterBuy = (
   return {
     quantity: nextQuantity,
     averageCost: nextAverage,
+    listingPrice: holding.listingPrice,
   };
 };
 
@@ -185,7 +189,19 @@ const updateHoldingAfterSell = (holding: HoldingState, quantity: number): Holdin
   return {
     quantity: nextQuantity,
     averageCost: nextQuantity === 0 ? 0 : holding.averageCost,
+    listingPrice: nextQuantity === 0 ? null : holding.listingPrice,
   };
+};
+
+const appendPriceHistory = (history: number[], nextPrice: number): number[] => {
+  const normalizedPrice = roundMoney(nextPrice);
+  const prevPrice = history.at(-1);
+
+  if (prevPrice === normalizedPrice) {
+    return history;
+  }
+
+  return [...history, normalizedPrice].slice(-MAX_PRICE_HISTORY);
 };
 
 const copyState = (state: GameState): GameState => ({
@@ -234,6 +250,11 @@ export const buyUnits = (
   next.markets[productId].price = roundMoney(
     market.price * (1 + executableQuantity / Math.max(product.baseSupply * 12, 1)),
   );
+  next.markets[productId].priceHistory = appendPriceHistory(
+    market.priceHistory,
+    next.markets[productId].price,
+  );
+  next.holdings[productId].listingPrice = roundMoney(market.price * 1.1);
 
   return {
     ok: true,
@@ -269,6 +290,10 @@ export const sellUnits = (
   next.markets[productId].supply += executableQuantity;
   next.markets[productId].price = roundMoney(
     market.price * (1 - executableQuantity / Math.max(product.baseSupply * 18, 1)),
+  );
+  next.markets[productId].priceHistory = appendPriceHistory(
+    market.priceHistory,
+    next.markets[productId].price,
   );
 
   return {
@@ -367,6 +392,10 @@ const sellFromRival = (
   state.markets[product.id].price = roundMoney(
     market.price * (1 - executableQuantity / Math.max(product.baseSupply * 26, 1)),
   );
+  state.markets[product.id].priceHistory = appendPriceHistory(
+    market.priceHistory,
+    state.markets[product.id].price,
+  );
 
   return `${rival.name} unloaded ${executableQuantity} ${product.name}.`;
 };
@@ -395,6 +424,10 @@ const buyForRival = (
   state.markets[product.id].supply -= executableQuantity;
   state.markets[product.id].price = roundMoney(
     market.price * (1 + executableQuantity / Math.max(product.baseSupply * 14, 1)),
+  );
+  state.markets[product.id].priceHistory = appendPriceHistory(
+    market.priceHistory,
+    state.markets[product.id].price,
   );
 
   return `${rival.name} accumulated ${executableQuantity} ${product.name}.`;
@@ -482,6 +515,7 @@ export const advanceDay = (state: GameState): SimulationResult => {
     next.markets[product.id] = {
       ...market,
       price,
+      priceHistory: appendPriceHistory(market.priceHistory, price),
       supply,
       demandIndex: roundMoney(demandIndex),
       seasonFactor: roundMoney(seasonFactor),
@@ -527,3 +561,101 @@ export const formatMoney = (value: number): string =>
     currency: 'USD',
     maximumFractionDigits: 0,
   }).format(value);
+
+export const setListingPrice = (
+  state: GameState,
+  productId: string,
+  listingPrice: number | null,
+): SimulationResult => {
+  const product = getProduct(productId);
+  const holding = state.holdings[productId];
+
+  if (holding.quantity <= 0) {
+    return {
+      ok: false,
+      message: `No ${product.name} holdings to list.`,
+      state,
+    };
+  }
+
+  if (listingPrice !== null && listingPrice <= 0) {
+    return {
+      ok: false,
+      message: 'Listing price must be above zero.',
+      state,
+    };
+  }
+
+  const next = copyState(state);
+  const normalized = listingPrice === null ? null : roundMoney(listingPrice);
+  next.holdings[productId].listingPrice = normalized;
+
+  return {
+    ok: true,
+    message:
+      normalized === null
+        ? `Cleared auto-listing for ${product.name}.`
+        : `Set ${product.name} listing to ${formatMoney(normalized)}.`,
+    state: withLog(
+      next,
+      normalized === null
+        ? `Cleared listing for ${product.name}.`
+        : `Updated ${product.name} listing to ${formatMoney(normalized)}.`,
+      'trade',
+    ),
+  };
+};
+
+export const runAutoListings = (state: GameState): SimulationResult => {
+  const next = copyState(state);
+  const sales: string[] = [];
+
+  for (const product of PRODUCTS) {
+    const holding = next.holdings[product.id];
+    const market = next.markets[product.id];
+
+    if (holding.quantity <= 0 || holding.listingPrice === null || market.price < holding.listingPrice) {
+      continue;
+    }
+
+    const proceeds = roundMoney(holding.quantity * market.price);
+    const realized = roundMoney((market.price - holding.averageCost) * holding.quantity);
+    const quantity = holding.quantity;
+
+    next.cash = roundMoney(next.cash + proceeds);
+    next.realizedProfit = roundMoney(next.realizedProfit + realized);
+    next.holdings[product.id] = {
+      quantity: 0,
+      averageCost: 0,
+      listingPrice: null,
+    };
+    next.markets[product.id].supply += quantity;
+    next.markets[product.id].price = roundMoney(
+      market.price * (1 - quantity / Math.max(product.baseSupply * 18, 1)),
+    );
+    next.markets[product.id].priceHistory = appendPriceHistory(
+      market.priceHistory,
+      next.markets[product.id].price,
+    );
+    sales.push(`Auto-sold ${quantity} ${product.name} at ${formatMoney(market.price)}.`);
+  }
+
+  if (sales.length === 0) {
+    return {
+      ok: false,
+      message: 'No listings filled this update.',
+      state,
+    };
+  }
+
+  let result = next;
+  for (const sale of sales) {
+    result = withLog(result, sale, 'trade');
+  }
+
+  return {
+    ok: true,
+    message: sales.join(' '),
+    state: result,
+  };
+};
