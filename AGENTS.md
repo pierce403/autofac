@@ -111,6 +111,7 @@ npm run test:e2e
 
 ## Rapport Notes
 
+- 2026-10-13 dependency review: a lockfile-only update within the existing `vite: ^7.1.11` range resolves Vite 7.3.7, PostCSS 8.5.30, nanoid 3.3.20, source-map-js 1.2.2, and esbuild 0.28.2. `@playwright/test` and TypeScript remain pinned. Clean `npm ci`, `npm run check`, `npm run build`, `npm audit --audit-level=low` (zero findings), and `npm run test:e2e` (7 passed, 2 viewport-specific skips) passed. The build retained `dist/CNAME`. The Pages workflow runs on main, so verify its exact commit and the live `autofac.io` output after merge.
 - The collaborator wants visible momentum: start with a large TODO, then work through it.
 - They want a strict commit cadence: initial commit at startup, then one commit per completed task.
 - They want recursive self-improvement behavior explicitly documented in this file.
