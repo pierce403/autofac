@@ -4,6 +4,8 @@
 
 ## Active / In Progress
 
+- [ ] **[DEPLOY-CF]** Move the existing static game to Cloudflare native Git hosting with verified HTTPS, real404 and visitor/request metrics; preserve local saves and Pages recovery
+
 - [ ] **[WORLD-1]** Define the fictional setting, warehouse voice, and product taxonomy for the game world
 
 ## Next Up
