@@ -4,7 +4,6 @@
 
 ## Active / In Progress
 
-- [ ] **[DEPLOY-CF]** Move the existing static game to Cloudflare native Git hosting with verified HTTPS, real404 and visitor/request metrics; preserve local saves and Pages recovery
 
 - [ ] **[WORLD-1]** Define the fictional setting, warehouse voice, and product taxonomy for the game world
 
@@ -39,6 +38,8 @@
 - [ ] **[NARR-1]** Add faction flavor via fictional warehouse districts and buyers without using real companies
 
 ## Completed
+
+- [x] **[DEPLOY-CF]** Move the existing static game to Cloudflare native Git hosting with verified HTTPS, real404 and visitor/request metrics; preserve local saves and Pages recovery - 2026-10-14
 
 - [x] **[SEC-1]** Refresh the compatible development dependency lockfile and verify the responsive Pages build - 2026-10-13
 - [x] **[SETUP-1]** Initialize git repo with `main` as default branch - 2026-04-04

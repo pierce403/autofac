@@ -17,3 +17,9 @@ previews are disabled. The existing Vite generator supplies `dist`, with
 a no-store revision marker and terminal404 handling. Validate with `npm ci`,
 the existing tests, and `npm run check:deploy`. `npm run deploy` is the native
 deploy command. GitHub Pages and source history remain recovery sources.
+
+October 14 hosting acceptance passed: exact native production build/version and
+route, managed TLS, normal HTTPS, generated asset comparisons, real404 and
+HTTP path/query upgrades, live browser rendering and received visitor/request
+metrics. GitHub Pages is retained for recovery. Application code and local
+persistence were unchanged; existing user save data was not reset.
