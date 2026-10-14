@@ -117,3 +117,10 @@ npm run test:e2e
 - They want recursive self-improvement behavior explicitly documented in this file.
 - They want the live site verified at the real domain, not just a successful Actions run.
 - They corrected the market framing from global optimization to local community-sized supply chains. New mechanics and copy should stay local-first unless they explicitly widen the scope again.
+
+- 2026-10-14 Cloudflare preparation: locked `npm ci`, `npm run check`,
+  `npm run build`, `npm run test:e2e` (7passed,2viewport-specific skips) and
+  `npm run check:deploy` pass. The Vite output remains dist and save key remains
+  autofac-save-v7. Native main publishing and metrics are pending live acceptance;
+  deployment credentials belong only in Cloudflare. Use workspace PWTEST_CACHE_DIR
+  and TMPDIR if the machine temporary filesystem hits quota.
